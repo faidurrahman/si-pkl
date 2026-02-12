@@ -21,7 +21,12 @@ import {
   Loader2,
   Pencil,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+  User
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
@@ -43,12 +48,23 @@ const KELURAHAN_LIST = [
   "Sawerigading"
 ];
 
+interface UserAuth {
+  username: string;
+  role: 'super_admin' | 'admin';
+  kelurahan?: string;
+}
+
 const App: React.FC = () => {
+  // Authentication State
+  const [user, setUser] = useState<UserAuth | null>(null);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // App State
   const [data, setData] = useState<PKLData[]>(INITIAL_PKL_DATA);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Sudah Relokasi' | 'Belum Relokasi'>('All');
-  const [aiResponse, setAiResponse] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'table'>('dashboard');
   
   const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -79,6 +95,58 @@ const App: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Logic to filter data based on user role
+  const scopedData = useMemo(() => {
+    if (!user) return [];
+    if (user.role === 'super_admin') return data;
+    return data.filter(item => item.kelurahan.trim().toLowerCase() === user.kelurahan?.trim().toLowerCase());
+  }, [data, user]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError(null);
+
+    setTimeout(() => {
+      const { username, password } = loginForm;
+      const inputUser = username.trim().toLowerCase();
+      const inputPass = password.trim();
+
+      // Super Admin: superadmin / samiun15
+      if (inputUser === 'superadmin' && inputPass === 'samiun15') {
+        setUser({ username: 'Super Admin', role: 'super_admin' });
+        setIsLoggingIn(false);
+        return;
+      }
+
+      // Admin Kelurahan: Username = Password = Nama Kelurahan
+      let foundAdmin = false;
+      for (const kel of KELURAHAN_LIST) {
+        const normalizedKel = kel.toLowerCase().replace(/\s+/g, '');
+        const inputPassNormalized = inputPass.toLowerCase().replace(/\s+/g, '');
+        
+        if (inputUser === normalizedKel && inputPassNormalized === normalizedKel) {
+          setUser({ username: `Admin ${kel}`, role: 'admin', kelurahan: kel });
+          foundAdmin = true;
+          break;
+        }
+      }
+
+      if (!foundAdmin) {
+        setLoginError('User name atau password salah!');
+      }
+      setIsLoggingIn(false);
+    }, 800);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setLoginForm({ username: '', password: '' });
+    setLoginError(null);
+    setSelectedDistrict(null);
+    setActiveTab('dashboard');
+  };
+
   const loadData = async (silent = false) => {
     if (!silent) setIsSyncing(true);
     try {
@@ -96,22 +164,31 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(() => loadData(true), 30000); 
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      loadData();
+      const interval = setInterval(() => loadData(true), 30000); 
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Set default kelurahan in form for admins
+  useEffect(() => {
+    if (isFormOpen && !isEditMode && user?.role === 'admin' && user.kelurahan) {
+      setFormData(prev => ({ ...prev, kelurahan: user.kelurahan || '' }));
+    }
+  }, [isFormOpen, isEditMode, user]);
 
   const stats = useMemo(() => {
-    const total = data.length;
-    const relocated = data.filter(d => d.status === 'Sudah Relokasi').length;
+    const total = scopedData.length;
+    const relocated = scopedData.filter(d => d.status === 'Sudah Relokasi').length;
     const notRelocated = total - relocated;
     const byDistrictMap: Record<string, number> = {};
-    data.forEach(d => {
+    scopedData.forEach(d => {
       const key = (d.kelurahan || 'Unknown').trim();
       byDistrictMap[key] = (byDistrictMap[key] || 0) + 1;
     });
     const districtData = Object.entries(byDistrictMap).map(([name, value]) => {
-      const dRelocated = data.filter(d => d.kelurahan.trim() === name && d.status === 'Sudah Relokasi').length;
+      const dRelocated = scopedData.filter(d => d.kelurahan.trim() === name && d.status === 'Sudah Relokasi').length;
       return { 
         name, 
         value, 
@@ -123,7 +200,7 @@ const App: React.FC = () => {
 
     let districtStats = null;
     if (selectedDistrict) {
-      const districtPKLs = data.filter(d => d.kelurahan.trim().toLowerCase() === selectedDistrict.trim().toLowerCase());
+      const districtPKLs = scopedData.filter(d => d.kelurahan.trim().toLowerCase() === selectedDistrict.trim().toLowerCase());
       const dRelocated = districtPKLs.filter(d => d.status === 'Sudah Relokasi').length;
       districtStats = { 
         total: districtPKLs.length, 
@@ -132,29 +209,17 @@ const App: React.FC = () => {
       };
     }
     return { total, relocated, notRelocated, districtData, districtStats };
-  }, [data, selectedDistrict]);
+  }, [scopedData, selectedDistrict]);
 
   const filteredData = useMemo(() => {
-    return data.filter(item => {
+    return scopedData.filter(item => {
       const s = searchTerm.trim().toLowerCase();
       const matchesSearch = !s || item.nama_pedagang.toLowerCase().includes(s) || item.kelurahan.toLowerCase().includes(s) || item.id_pkl.toLowerCase().includes(s);
       const matchesDistrict = !selectedDistrict || item.kelurahan.trim().toLowerCase() === selectedDistrict.trim().toLowerCase();
       const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
       return matchesSearch && matchesDistrict && matchesStatus;
     });
-  }, [data, searchTerm, selectedDistrict, statusFilter]);
-
-  const handleAiAsk = async () => {
-    setIsAnalyzing(true);
-    try {
-      const result = await analyzePKLData(filteredData, `Berikan analisis ringkas tentang status relokasi PKL.`);
-      setAiResponse(result);
-    } catch (err) {
-      setAiResponse("Gagal mendapatkan analisis AI.");
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+  }, [scopedData, searchTerm, selectedDistrict, statusFilter]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
     const file = e.target.files?.[0];
@@ -193,10 +258,10 @@ const App: React.FC = () => {
         await loadData();
         setDeletingId(null);
         setIsDeleting(false);
-        alert('Data pedagang berhasil dihapus dari sistem.');
+        alert('Data pedagang berhasil dihapus.');
       }, 2000);
     } catch (err) {
-      alert('Gagal menghapus data. Silakan coba lagi.');
+      alert('Gagal menghapus data.');
       setIsDeleting(false);
     }
   };
@@ -224,7 +289,7 @@ const App: React.FC = () => {
   const closeForm = () => {
     setIsFormOpen(false);
     setIsEditMode(false);
-    setFormData({ id_pkl: '', nama: '', kelurahan: KELURAHAN_LIST[0], alamat: '', jenis: '', status: 'Belum Relokasi', history: '', fotoBeforeBase64: '', fotoAfterBase64: '' });
+    setFormData({ id_pkl: '', nama: '', kelurahan: user?.role === 'admin' ? (user.kelurahan || '') : KELURAHAN_LIST[0], alamat: '', jenis: '', status: 'Belum Relokasi', history: '', fotoBeforeBase64: '', fotoAfterBase64: '' });
     setPreviews({ before: '', after: '' });
   };
 
@@ -234,18 +299,119 @@ const App: React.FC = () => {
     setStatusFilter('All');
   };
 
+  // Login View
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+        </div>
+        
+        <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+          <div className="bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-200">
+            <div className="bg-slate-900 p-10 text-center relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-12 bg-emerald-500/10 blur-2xl rounded-full -mr-12 -mt-12" />
+               <div className="relative z-10 inline-flex bg-emerald-500 p-4 rounded-3xl shadow-lg shadow-emerald-500/30 mb-6">
+                 <LayoutDashboard size={32} className="text-white" />
+               </div>
+               <h1 className="text-3xl font-bold text-white tracking-tight relative z-10">SI-PKL Admin</h1>
+               <p className="text-slate-400 mt-2 text-sm relative z-10">Sistem Monitoring Pedagang Kaki Lima</p>
+            </div>
+            
+            <form onSubmit={handleLogin} className="p-10 space-y-6">
+              {loginError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-xs font-bold flex items-center gap-3 animate-shake shadow-sm">
+                  <AlertTriangle size={18} className="shrink-0" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">User Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="Masukkan user name..." 
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 transition-all text-sm font-medium"
+                      value={loginForm.username}
+                      onChange={(e) => {
+                        setLoginForm({...loginForm, username: e.target.value});
+                        if (loginError) setLoginError(null);
+                      }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      required
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 transition-all text-sm font-medium"
+                      value={loginForm.password}
+                      onChange={(e) => {
+                        setLoginForm({...loginForm, password: e.target.value});
+                        if (loginError) setLoginError(null);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                disabled={isLoggingIn}
+                type="submit" 
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-3"
+              >
+                {isLoggingIn ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    <LogIn size={20} />
+                    <span>Login Dashboard</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
-      <aside className="w-full md:w-64 bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 md:sticky top-0 h-auto md:h-screen z-10 shadow-2xl">
+      <aside className="w-full md:w-72 bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 md:sticky top-0 h-auto md:h-screen z-10 shadow-2xl">
         <div className="flex items-center space-x-3 text-white">
           <div className="bg-emerald-500 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20"><LayoutDashboard size={24} /></div>
           <div><span className="text-xl font-bold tracking-tight block">SI-PKL</span><span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Monitoring System</span></div>
         </div>
+
+        <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+           <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-emerald-400">
+                {user.role === 'super_admin' ? <ShieldCheck size={20} /> : <User size={20} />}
+             </div>
+             <div className="flex-1 overflow-hidden">
+                <p className="text-xs font-bold text-white truncate">{user.username}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate">{user.role === 'super_admin' ? 'Super Admin' : 'Admin'}</p>
+             </div>
+           </div>
+        </div>
+
         <nav className="flex-1 space-y-2">
-          <button onClick={() => { setActiveTab('dashboard'); setSelectedDistrict(null); }} className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all ${activeTab === 'dashboard' && !selectedDistrict ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30' : 'hover:bg-slate-800'}`}><TrendingUp size={20} /><span className="font-medium">Overview</span></button>
-          <button onClick={() => setActiveTab('table')} className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all ${activeTab === 'table' ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30' : 'hover:bg-slate-800'}`}><Users size={20} /><span className="font-medium">Database PKL</span></button>
-          <div className="pt-4"><button onClick={() => { setIsEditMode(false); setIsFormOpen(true); }} className="w-full flex items-center justify-center space-x-3 p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95"><PlusCircle size={20} /><span>Tambah Data</span></button></div>
+          <button onClick={() => { setActiveTab('dashboard'); setSelectedDistrict(null); }} className={`w-full flex items-center space-x-3 p-3.5 rounded-xl transition-all ${activeTab === 'dashboard' && !selectedDistrict ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 font-bold' : 'hover:bg-slate-800'}`}><TrendingUp size={20} /><span>Overview</span></button>
+          <button onClick={() => setActiveTab('table')} className={`w-full flex items-center space-x-3 p-3.5 rounded-xl transition-all ${activeTab === 'table' ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 font-bold' : 'hover:bg-slate-800'}`}><Users size={20} /><span>Database PKL</span></button>
+          <div className="pt-4"><button onClick={() => { setIsEditMode(false); setIsFormOpen(true); }} className="w-full flex items-center justify-center space-x-3 p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95"><PlusCircle size={20} /><span>Tambah Data</span></button></div>
         </nav>
+
         <div className="pt-8 border-t border-slate-800 space-y-4">
           <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
             <div className="flex items-center justify-between mb-2">
@@ -254,13 +420,26 @@ const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-300"><Clock size={12} /><span>{lastSync.toLocaleTimeString('id-ID')}</span></div>
           </div>
+          
+          <button onClick={handleLogout} className="w-full flex items-center space-x-3 p-3.5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
+            <LogOut size={20} />
+            <span className="font-bold">Logout</span>
+          </button>
         </div>
       </aside>
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex-1"><h1 className="text-2xl font-bold text-slate-900">{selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama'}</h1><p className="text-slate-500 text-sm">Update terakhir: {lastSync.toLocaleString('id-ID')}</p></div>
-          <div className="relative w-full sm:w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} /><input type="text" placeholder="Cari ID atau Nama..." className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-slate-900">
+              {user.role === 'admin' ? `Wilayah: ${user.kelurahan}` : (selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama')}
+            </h1>
+            <p className="text-slate-500 text-sm">Monitoring PKL Kota - {lastSync.toLocaleString('id-ID')}</p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input type="text" placeholder="Cari ID atau Nama..." className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
         </header>
 
         {activeTab === 'dashboard' ? (
@@ -269,36 +448,38 @@ const App: React.FC = () => {
               <StatCard title="Total PKL" value={selectedDistrict ? (stats.districtStats?.total ?? 0) : stats.total} icon={<Users />} color="text-blue-600 bg-blue-100" />
               <StatCard title="Relokasi" value={selectedDistrict ? (stats.districtStats?.relocated ?? 0) : stats.relocated} icon={<CheckCircle />} color="text-emerald-600 bg-emerald-100" />
               <StatCard title="Belum" value={selectedDistrict ? (stats.districtStats?.notRelocated ?? 0) : stats.notRelocated} icon={<XCircle />} color="text-red-600 bg-red-100" />
-              <StatCard title="Efektivitas" value={selectedDistrict ? `${(stats.districtStats?.total ?? 0) > 0 ? Math.round(((stats.districtStats?.relocated ?? 0) / (stats.districtStats?.total ?? 1)) * 100) : 0}%` : `${stats.districtData.length} Wilayah`} icon={<TrendingUp />} color="text-amber-600 bg-amber-100" />
+              <StatCard title="Efektivitas" value={selectedDistrict ? `${(stats.districtStats?.total ?? 0) > 0 ? Math.round(((stats.districtStats?.relocated ?? 0) / (stats.districtStats?.total ?? 1)) * 100) : 0}%` : (user.role === 'super_admin' ? `${stats.districtData.length} Wilayah` : `${Math.round((stats.relocated / (stats.total || 1)) * 100)}% Progress`)} icon={<TrendingUp />} color="text-amber-600 bg-amber-100" />
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
-                  <div className="flex items-center gap-3"><ClipboardList className="text-blue-600" size={20} /><h3 className="font-bold text-slate-800">Rekapitulasi Wilayah</h3></div>
-               </div>
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left">
-                   <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
-                     <tr><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4 text-center">Total</th><th className="px-6 py-4 text-center">Relokasi</th><th className="px-6 py-4 text-center">Belum</th><th className="px-6 py-4">Progress</th></tr>
-                   </thead>
-                   <tbody className="divide-y divide-slate-100">
-                     {stats.districtData.map((district) => (
-                       <tr key={district.name} onClick={() => setSelectedDistrict(district.name)} className={`hover:bg-emerald-50 transition-colors cursor-pointer ${selectedDistrict === district.name ? 'bg-emerald-50' : ''}`}>
-                         <td className="px-6 py-4 font-bold text-slate-900">{district.name}</td>
-                         <td className="px-6 py-4 text-center font-bold text-slate-500">{district.value}</td>
-                         <td className="px-6 py-4 text-center"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.relocated}</span></td>
-                         <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.notRelocated}</span></td>
-                         <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${district.percentage}%` }} /></div><span className="text-[10px] font-bold text-slate-400">{district.percentage}%</span></div></td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </div>
-            </div>
+            {user.role === 'super_admin' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+                    <div className="flex items-center gap-3"><ClipboardList className="text-blue-600" size={20} /><h3 className="font-bold text-slate-800">Rekapitulasi Wilayah</h3></div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
+                      <tr><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4 text-center">Total</th><th className="px-6 py-4 text-center">Relokasi</th><th className="px-6 py-4 text-center">Belum</th><th className="px-6 py-4">Progress</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {stats.districtData.map((district) => (
+                        <tr key={district.name} onClick={() => setSelectedDistrict(district.name)} className={`hover:bg-emerald-50 transition-colors cursor-pointer ${selectedDistrict === district.name ? 'bg-emerald-50' : ''}`}>
+                          <td className="px-6 py-4 font-bold text-slate-900">{district.name}</td>
+                          <td className="px-6 py-4 text-center font-bold text-slate-500">{district.value}</td>
+                          <td className="px-6 py-4 text-center"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.relocated}</span></td>
+                          <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.notRelocated}</span></td>
+                          <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${district.percentage}%` }} /></div><span className="text-[10px] font-bold text-slate-400">{district.percentage}%</span></div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
-            <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-500 overflow-hidden ${selectedDistrict ? 'border-emerald-500/40 ring-8 ring-emerald-500/5' : 'border-white'}`}>
-               <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${selectedDistrict ? 'bg-emerald-50/30' : 'bg-slate-50/10'}`}>
-                  <div className="flex items-center gap-3"><div className="bg-emerald-500 text-white p-2 rounded-xl"><Users size={18} /></div><div><h3 className="font-bold text-slate-900">{selectedDistrict ? `Daftar: ${selectedDistrict}` : 'Daftar Pedagang'}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} pedagang</p></div></div>
+            <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-500 overflow-hidden ${(selectedDistrict || user.role === 'admin') ? 'border-emerald-500/40 ring-8 ring-emerald-500/5' : 'border-white'}`}>
+               <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${(selectedDistrict || user.role === 'admin') ? 'bg-emerald-50/30' : 'bg-slate-50/10'}`}>
+                  <div className="flex items-center gap-3"><div className="bg-emerald-500 text-white p-2 rounded-xl"><Users size={18} /></div><div><h3 className="font-bold text-slate-900">{(selectedDistrict || user.role === 'admin') ? `Daftar: ${user.role === 'admin' ? user.kelurahan : selectedDistrict}` : 'Daftar Pedagang'}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} pedagang ditemukan</p></div></div>
                   <div className="flex items-center gap-3">
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider outline-none"><option value="All">Semua Status</option><option value="Sudah Relokasi">Sudah Relokasi</option><option value="Belum Relokasi">Belum Relokasi</option></select>
                     {(selectedDistrict || statusFilter !== 'All') && <button onClick={resetAllFilters} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2"><RefreshCw size={14} /> RESET</button>}
@@ -320,7 +501,9 @@ const App: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all" title="Detail"><Info size={14} /></button>
                               <button onClick={() => openFormForEdit(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-blue-500 hover:text-white transition-all" title="Edit"><Pencil size={14} /></button>
-                              <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Hapus"><Trash2 size={14} /></button>
+                              {user.role === 'super_admin' && (
+                                <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Hapus"><Trash2 size={14} /></button>
+                              )}
                             </div>
                          </td>
                        </tr>
@@ -339,7 +522,7 @@ const App: React.FC = () => {
                      <tr><th className="px-6 py-4">ID</th><th className="px-6 py-4">Nama</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100">
-                     {data.map((item, idx) => (
+                     {filteredData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
                          <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id_pkl}</td>
                          <td className="px-6 py-4 font-bold text-slate-900">{item.nama_pedagang}</td>
@@ -349,7 +532,9 @@ const App: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><Info size={14} /></button>
                               <button onClick={() => openFormForEdit(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-blue-500 hover:text-white transition-all"><Pencil size={14} /></button>
-                              <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+                              {user.role === 'super_admin' && (
+                                <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+                              )}
                             </div>
                          </td>
                        </tr>
@@ -376,7 +561,13 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Kelurahan</label>
-                      <select required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20" value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})}>
+                      <select 
+                        required 
+                        disabled={user?.role === 'admin'}
+                        className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 ${user?.role === 'admin' ? 'opacity-70 cursor-not-allowed' : ''}`} 
+                        value={formData.kelurahan} 
+                        onChange={(e) => setFormData({...formData, kelurahan: e.target.value})}
+                      >
                         {KELURAHAN_LIST.map(k => <option key={k} value={k}>{k}</option>)}
                       </select>
                     </div>
@@ -412,15 +603,15 @@ const App: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6">
                 <AlertTriangle size={32} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Data Pedagang?</h3>
-              <p className="text-slate-500 text-sm mb-8">Tindakan ini tidak dapat dibatalkan. Data pedagang dengan ID <span className="font-mono font-bold text-slate-700">{deletingId}</span> akan dihapus permanen dari database.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Data?</h3>
+              <p className="text-slate-500 text-sm mb-8">Data pedagang dengan ID <span className="font-mono font-bold text-slate-700">{deletingId}</span> akan dihapus dari sistem.</p>
               <div className="flex flex-col gap-3">
                  <button 
                    disabled={isDeleting}
                    onClick={confirmDelete} 
                    className="w-full py-3.5 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2"
                  >
-                   {isDeleting ? <><Loader2 className="animate-spin" size={18} /><span>Menghapus...</span></> : 'Ya, Hapus Sekarang'}
+                   {isDeleting ? <><Loader2 className="animate-spin" size={18} /><span>Menghapus...</span></> : 'Hapus Sekarang'}
                  </button>
                  <button 
                    disabled={isDeleting}
