@@ -30,6 +30,19 @@ import StatCard from './components/StatCard';
 import { analyzePKLData } from './services/geminiService';
 import { fetchPKLDataFromSheet, submitPKLData, updatePKLData, deletePKLData, fileToBase64 } from './services/googleSheetService';
 
+const KELURAHAN_LIST = [
+  "Baru",
+  "Bulogading",
+  "Lae-Lae",
+  "Lajangiru",
+  "Losari",
+  "Maloku",
+  "Mangkura",
+  "Pisang Selatan",
+  "Pisang Utara",
+  "Sawerigading"
+];
+
 const App: React.FC = () => {
   const [data, setData] = useState<PKLData[]>(INITIAL_PKL_DATA);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +65,7 @@ const App: React.FC = () => {
   const [formData, setFormData] = useState({
     id_pkl: '',
     nama: '',
-    kelurahan: '',
+    kelurahan: KELURAHAN_LIST[0],
     alamat: '',
     jenis: '',
     status: 'Belum Relokasi',
@@ -211,7 +224,7 @@ const App: React.FC = () => {
   const closeForm = () => {
     setIsFormOpen(false);
     setIsEditMode(false);
-    setFormData({ id_pkl: '', nama: '', kelurahan: '', alamat: '', jenis: '', status: 'Belum Relokasi', history: '', fotoBeforeBase64: '', fotoAfterBase64: '' });
+    setFormData({ id_pkl: '', nama: '', kelurahan: KELURAHAN_LIST[0], alamat: '', jenis: '', status: 'Belum Relokasi', history: '', fotoBeforeBase64: '', fotoAfterBase64: '' });
     setPreviews({ before: '', after: '' });
   };
 
@@ -361,7 +374,12 @@ const App: React.FC = () => {
                   <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 border-b pb-2"><ClipboardList className="text-emerald-500" size={18} /> Informasi Dasar</h3>
                   <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Nama Pedagang</label><input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20" value={formData.nama} onChange={(e) => setFormData({...formData, nama: e.target.value})} /></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Kelurahan</label><input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})} /></div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Kelurahan</label>
+                      <select required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20" value={formData.kelurahan} onChange={(e) => setFormData({...formData, kelurahan: e.target.value})}>
+                        {KELURAHAN_LIST.map(k => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                    </div>
                     <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Jenis Dagangan</label><input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.jenis} onChange={(e) => setFormData({...formData, jenis: e.target.value})} /></div>
                   </div>
                   <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Alamat / Lokasi</label><textarea required rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.alamat} onChange={(e) => setFormData({...formData, alamat: e.target.value})}></textarea></div>
