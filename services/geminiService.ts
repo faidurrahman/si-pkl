@@ -2,8 +2,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { PKLData } from "../types";
 
-export const analyzePKLData = async (data: PKLData[], prompt: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export const analyzePKLData = async (data: PKLData[], prompt: string): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   
   const dataSummary = data.map(item => ({
     id: item.id_pkl,
@@ -30,9 +30,10 @@ export const analyzePKLData = async (data: PKLData[], prompt: string) => {
       },
     });
 
-    return response.text;
+    // Menggunakan nullish coalescing untuk memastikan string selalu dikembalikan
+    return response.text ?? "Maaf, AI tidak memberikan respon teks.";
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
-    return "Maaf, terjadi kesalahan saat melakukan analisis AI.";
+    return "Maaf, terjadi kesalahan saat melakukan analisis AI. Silakan coba lagi nanti.";
   }
 };

@@ -1,6 +1,6 @@
 
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Cell as RechartsCell 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend 
 } from 'recharts';
 import { 
   LayoutDashboard, 
@@ -8,17 +8,13 @@ import {
   CheckCircle, 
   XCircle, 
   Search, 
-  BrainCircuit,
   MapPin,
   TrendingUp,
   RefreshCw,
-  ArrowLeft,
   Info,
   Camera,
   X,
   ClipboardList,
-  Filter,
-  ChevronDown,
   Clock,
   PlusCircle,
   UploadCloud,
@@ -27,14 +23,12 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
 import { PKLData } from './types';
 import StatCard from './components/StatCard';
 import { analyzePKLData } from './services/geminiService';
 import { fetchPKLDataFromSheet, submitPKLData, updatePKLData, deletePKLData, fileToBase64 } from './services/googleSheetService';
-
-const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6'];
 
 const App: React.FC = () => {
   const [data, setData] = useState<PKLData[]>(INITIAL_PKL_DATA);
@@ -105,18 +99,26 @@ const App: React.FC = () => {
     });
     const districtData = Object.entries(byDistrictMap).map(([name, value]) => {
       const dRelocated = data.filter(d => d.kelurahan.trim() === name && d.status === 'Sudah Relokasi').length;
-      const dNotRelocated = value - dRelocated;
-      return { name, value, relocated: dRelocated, notRelocated: dNotRelocated, percentage: value > 0 ? Math.round((dRelocated / value) * 100) : 0 };
+      return { 
+        name, 
+        value, 
+        relocated: dRelocated, 
+        notRelocated: value - dRelocated, 
+        percentage: value > 0 ? Math.round((dRelocated / value) * 100) : 0 
+      };
     }).sort((a, b) => b.value - a.value);
-    const pieData = [{ name: 'Sudah Relokasi', value: relocated }, { name: 'Belum Relokasi', value: notRelocated }];
+
     let districtStats = null;
     if (selectedDistrict) {
       const districtPKLs = data.filter(d => d.kelurahan.trim().toLowerCase() === selectedDistrict.trim().toLowerCase());
       const dRelocated = districtPKLs.filter(d => d.status === 'Sudah Relokasi').length;
-      const dNotRelocated = districtPKLs.length - dRelocated;
-      districtStats = { total: districtPKLs.length, relocated: dRelocated, notRelocated: dNotRelocated, pieData: [{ name: 'Sudah Relokasi', value: dRelocated }, { name: 'Belum Relokasi', value: dNotRelocated }] };
+      districtStats = { 
+        total: districtPKLs.length, 
+        relocated: dRelocated, 
+        notRelocated: districtPKLs.length - dRelocated 
+      };
     }
-    return { total, relocated, notRelocated, districtData, pieData, districtStats };
+    return { total, relocated, notRelocated, districtData, districtStats };
   }, [data, selectedDistrict]);
 
   const filteredData = useMemo(() => {
@@ -131,9 +133,14 @@ const App: React.FC = () => {
 
   const handleAiAsk = async () => {
     setIsAnalyzing(true);
-    const result = await analyzePKLData(filteredData, `Berikan analisis ringkas tentang status relokasi PKL.`);
-    setAiResponse(result);
-    setIsAnalyzing(false);
+    try {
+      const result = await analyzePKLData(filteredData, `Berikan analisis ringkas tentang status relokasi PKL.`);
+      setAiResponse(result);
+    } catch (err) {
+      setAiResponse("Gagal mendapatkan analisis AI.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
@@ -169,7 +176,6 @@ const App: React.FC = () => {
     setIsDeleting(true);
     try {
       await deletePKLData(deletingId);
-      // Tunggu sebentar untuk sinkronisasi Google Sheet
       setTimeout(async () => {
         await loadData();
         setDeletingId(null);
@@ -247,10 +253,10 @@ const App: React.FC = () => {
         {activeTab === 'dashboard' ? (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard title="Total PKL" value={selectedDistrict ? stats.districtStats?.total! : stats.total} icon={<Users />} color="text-blue-600 bg-blue-100" />
-              <StatCard title="Relokasi" value={selectedDistrict ? stats.districtStats?.relocated! : stats.relocated} icon={<CheckCircle />} color="text-emerald-600 bg-emerald-100" />
-              <StatCard title="Belum" value={selectedDistrict ? stats.districtStats?.notRelocated! : stats.notRelocated} icon={<XCircle />} color="text-red-600 bg-red-100" />
-              <StatCard title="Efektivitas" value={selectedDistrict ? `${stats.districtStats?.total ? Math.round((stats.districtStats?.relocated! / stats.districtStats?.total!) * 100) : 0}%` : stats.districtData.length} icon={<TrendingUp />} color="text-amber-600 bg-amber-100" />
+              <StatCard title="Total PKL" value={selectedDistrict ? (stats.districtStats?.total ?? 0) : stats.total} icon={<Users />} color="text-blue-600 bg-blue-100" />
+              <StatCard title="Relokasi" value={selectedDistrict ? (stats.districtStats?.relocated ?? 0) : stats.relocated} icon={<CheckCircle />} color="text-emerald-600 bg-emerald-100" />
+              <StatCard title="Belum" value={selectedDistrict ? (stats.districtStats?.notRelocated ?? 0) : stats.notRelocated} icon={<XCircle />} color="text-red-600 bg-red-100" />
+              <StatCard title="Efektivitas" value={selectedDistrict ? `${(stats.districtStats?.total ?? 0) > 0 ? Math.round(((stats.districtStats?.relocated ?? 0) / (stats.districtStats?.total ?? 1)) * 100) : 0}%` : `${stats.districtData.length} Wilayah`} icon={<TrendingUp />} color="text-amber-600 bg-amber-100" />
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
