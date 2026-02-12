@@ -1,0 +1,5 @@
+{
+  "name": "SI-PKL Dashboard Monitoring",
+  "description": "Dashboard monitoring data pedagang kaki lima (PKL) dengan visualisasi data real-time, analisis berbasis AI Gemini, dan manajemen status relokasi.",
+  "requestFramePermissions": []
+}
