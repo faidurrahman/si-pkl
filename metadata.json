@@ -1,5 +1,5 @@
 {
-  "name": "SI-PKL Dashboard Monitoring",
-  "description": "Dashboard monitoring data pedagang kaki lima (PKL) dengan visualisasi data real-time, analisis berbasis AI Gemini, dan manajemen status relokasi.",
+  "name": "SIPAKATAU - Dashboard Monitoring",
+  "description": "Sistem Informasi Penataan Kawasan Tata Niaga Kecamatan Ujung Pandang. Dashboard monitoring data pedagang kaki lima (PKL) dengan visualisasi data real-time dan manajemen status relokasi.",
   "requestFramePermissions": []
 }

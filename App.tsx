@@ -32,6 +32,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
 import { PKLData } from './types';
 import StatCard from './components/StatCard';
+import Logo from './components/Logo';
 import { analyzePKLData } from './services/geminiService';
 import { fetchPKLDataFromSheet, submitPKLData, updatePKLData, deletePKLData, fileToBase64 } from './services/googleSheetService';
 
@@ -320,11 +321,11 @@ const App: React.FC = () => {
           <div className="bg-white rounded-[32px] shadow-2xl overflow-hidden border border-slate-200">
             <div className="bg-slate-900 p-10 text-center relative overflow-hidden">
                <div className="absolute top-0 right-0 p-12 bg-emerald-500/10 blur-2xl rounded-full -mr-12 -mt-12" />
-               <div className="relative z-10 inline-flex bg-emerald-500 p-4 rounded-3xl shadow-lg shadow-emerald-500/30 mb-6">
-                 <LayoutDashboard size={32} className="text-white" />
+               <div className="relative z-10 inline-flex shadow-lg shadow-emerald-500/30 mb-6">
+                 <Logo size={80} className="text-emerald-500" />
                </div>
-               <h1 className="text-3xl font-bold text-white tracking-tight relative z-10">SI-PKL Admin</h1>
-               <p className="text-slate-400 mt-2 text-sm relative z-10">Sistem Monitoring Pedagang Kaki Lima</p>
+               <h1 className="text-4xl font-black text-white tracking-tighter relative z-10">SIPAKATAU</h1>
+               <p className="text-slate-300 mt-3 text-xs font-medium leading-relaxed relative z-10 max-w-[280px] mx-auto">Sistem Informasi Penataan Kawasan Tata Niaga Kecamatan Ujung Pandang</p>
             </div>
             
             <form onSubmit={handleLogin} className="p-10 space-y-6">
@@ -376,7 +377,7 @@ const App: React.FC = () => {
               <button 
                 disabled={isLoggingIn}
                 type="submit" 
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-3"
+                className="w-full py-4 bg-green-700 hover:bg-green-600 text-white font-bold rounded-2xl transition-all shadow-xl shadow-green-700/20 active:scale-95 flex items-center justify-center gap-3"
               >
                 {isLoggingIn ? (
                   <Loader2 className="animate-spin" size={20} />
@@ -398,8 +399,8 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
       <aside className="w-full md:w-72 bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 md:sticky top-0 h-auto md:h-screen z-10 shadow-2xl">
         <div className="flex items-center space-x-3 text-white">
-          <div className="bg-emerald-500 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20"><LayoutDashboard size={24} /></div>
-          <div><span className="text-xl font-bold tracking-tight block">SI-PKL</span><span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Monitoring System</span></div>
+          <Logo size={40} className="text-emerald-500 shadow-lg shadow-emerald-500/20" />
+          <div><span className="text-xl font-black tracking-tighter block">SIPAKATAU</span><span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Monitoring System</span></div>
         </div>
 
         <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
@@ -442,7 +443,7 @@ const App: React.FC = () => {
             <h1 className="text-2xl font-bold text-slate-900">
               {user.role === 'admin' ? `Wilayah: ${user.kelurahan}` : (selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama')}
             </h1>
-            <p className="text-slate-500 text-sm">Monitoring PKL Kota - {lastSync.toLocaleString('id-ID')}</p>
+            <p className="text-slate-500 text-sm">Monitoring PKL Kecamatan Ujung Pandang - {lastSync.toLocaleString('id-ID')}</p>
           </div>
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
