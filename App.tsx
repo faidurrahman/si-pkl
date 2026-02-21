@@ -102,6 +102,10 @@ const App: React.FC = () => {
   // Sidebar State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Logic to filter data based on user role
   const scopedData = useMemo(() => {
     if (!user) return [];
@@ -235,6 +239,18 @@ const App: React.FC = () => {
       return matchesSearch && matchesDistrict && matchesStatus;
     });
   }, [scopedData, searchTerm, selectedDistrict, statusFilter]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDistrict, statusFilter, activeTab]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredData.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredData, currentPage]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
     const file = e.target.files?.[0];
@@ -546,13 +562,19 @@ const App: React.FC = () => {
                     {(selectedDistrict || statusFilter !== 'All') && <button onClick={resetAllFilters} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2"><RefreshCw size={14} /> RESET</button>}
                   </div>
                </div>
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left">
-                   <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
-                     <tr><th className="px-6 py-4">ID</th><th className="px-6 py-4">Pedagang</th><th className="px-6 py-4">Dagangan</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr>
+               <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                 <table className="w-full text-left border-collapse">
+                   <thead className="sticky top-0 z-10 bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100 shadow-sm">
+                     <tr>
+                       <th className="px-6 py-4 bg-slate-50">ID</th>
+                       <th className="px-6 py-4 bg-slate-50">Pedagang</th>
+                       <th className="px-6 py-4 bg-slate-50">Dagangan</th>
+                       <th className="px-6 py-4 bg-slate-50">Status</th>
+                       <th className="px-6 py-4 text-center bg-slate-50">Aksi</th>
+                     </tr>
                    </thead>
-                   <tbody className="divide-y divide-slate-100">
-                     {filteredData.slice(0, 50).map((item, idx) => (
+                   <tbody className="divide-y divide-slate-100 bg-white">
+                     {paginatedData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
                          <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id_pkl}</td>
                          <td className="px-6 py-4"><span className="font-bold text-slate-900 block group-hover:text-emerald-600">{item.nama_pedagang}</span><span className="text-[10px] text-slate-400 uppercase tracking-tighter">{item.kelurahan}</span></td>
@@ -572,18 +594,66 @@ const App: React.FC = () => {
                    </tbody>
                  </table>
                </div>
+               
+               {/* Pagination Controls */}
+               <div className="p-4 border-t bg-slate-50/50 flex items-center justify-between">
+                 <p className="text-xs text-slate-500">
+                   Menampilkan <span className="font-bold text-slate-900">{paginatedData.length}</span> dari <span className="font-bold text-slate-900">{filteredData.length}</span> data
+                 </p>
+                 <div className="flex items-center gap-1">
+                   <button 
+                     disabled={currentPage === 1}
+                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                     className="p-2 rounded-lg border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                   >
+                     <ChevronLeft size={16} />
+                   </button>
+                   
+                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                     let pageNum = currentPage;
+                     if (totalPages <= 5) pageNum = i + 1;
+                     else if (currentPage <= 3) pageNum = i + 1;
+                     else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                     else pageNum = currentPage - 2 + i;
+
+                     return (
+                       <button
+                         key={pageNum}
+                         onClick={() => setCurrentPage(pageNum)}
+                         className={`w-8 h-8 text-xs font-bold rounded-lg border transition-all ${currentPage === pageNum ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                       >
+                         {pageNum}
+                       </button>
+                     );
+                   })}
+                   
+                   <button 
+                     disabled={currentPage === totalPages || totalPages === 0}
+                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                     className="p-2 rounded-lg border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                   >
+                     <ChevronRight size={16} />
+                   </button>
+                 </div>
+               </div>
             </div>
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
              <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex justify-between items-center"><h3 className="font-bold text-slate-800">Database Semua Pedagang</h3><button onClick={() => loadData()} className="text-[10px] font-bold text-slate-500 flex items-center gap-2 hover:text-emerald-600 transition-colors uppercase tracking-widest"><RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} /> REFRESH</button></div>
-             <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                   <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                     <tr><th className="px-6 py-4">ID</th><th className="px-6 py-4">Nama</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr>
+             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                   <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 shadow-sm">
+                     <tr>
+                       <th className="px-6 py-4 bg-slate-50">ID</th>
+                       <th className="px-6 py-4 bg-slate-50">Nama</th>
+                       <th className="px-6 py-4 bg-slate-50">Kelurahan</th>
+                       <th className="px-6 py-4 bg-slate-50">Status</th>
+                       <th className="px-6 py-4 text-center bg-slate-50">Aksi</th>
+                     </tr>
                    </thead>
-                   <tbody className="divide-y divide-slate-100">
-                     {filteredData.map((item, idx) => (
+                   <tbody className="divide-y divide-slate-100 bg-white">
+                     {paginatedData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
                          <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id_pkl}</td>
                          <td className="px-6 py-4 font-bold text-slate-900">{item.nama_pedagang}</td>
@@ -602,6 +672,48 @@ const App: React.FC = () => {
                      ))}
                    </tbody>
                 </table>
+             </div>
+             
+             {/* Pagination Controls for Database Tab */}
+             <div className="p-4 border-t bg-slate-50/50 flex items-center justify-between">
+               <p className="text-xs text-slate-500">
+                 Menampilkan <span className="font-bold text-slate-900">{paginatedData.length}</span> dari <span className="font-bold text-slate-900">{filteredData.length}</span> data
+               </p>
+               <div className="flex items-center gap-1">
+                 <button 
+                   disabled={currentPage === 1}
+                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                   className="p-2 rounded-lg border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                 >
+                   <ChevronLeft size={16} />
+                 </button>
+                 
+                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                   let pageNum = currentPage;
+                   if (totalPages <= 5) pageNum = i + 1;
+                   else if (currentPage <= 3) pageNum = i + 1;
+                   else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                   else pageNum = currentPage - 2 + i;
+
+                   return (
+                     <button
+                       key={pageNum}
+                       onClick={() => setCurrentPage(pageNum)}
+                       className={`w-8 h-8 text-xs font-bold rounded-lg border transition-all ${currentPage === pageNum ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                     >
+                       {pageNum}
+                     </button>
+                   );
+                 })}
+                 
+                 <button 
+                   disabled={currentPage === totalPages || totalPages === 0}
+                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                   className="p-2 rounded-lg border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                 >
+                   <ChevronRight size={16} />
+                 </button>
+               </div>
              </div>
           </div>
         )}
