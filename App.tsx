@@ -26,7 +26,10 @@ import {
   LogIn,
   LogOut,
   ShieldCheck,
-  User
+  User,
+  ChevronLeft,
+  ChevronRight,
+  Menu
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
@@ -95,6 +98,9 @@ const App: React.FC = () => {
   // Delete State
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sidebar State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Logic to filter data based on user role
   const scopedData = useMemo(() => {
@@ -397,42 +403,88 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
-      <aside className="w-full md:w-72 bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 md:sticky top-0 h-auto md:h-screen z-10 shadow-2xl">
-        <div className="flex items-center space-x-3 text-white">
-          <Logo size={40} className="text-emerald-500 shadow-lg shadow-emerald-500/20" />
-          <div><span className="text-xl font-black tracking-tighter block">SIPAKATAU</span><span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Monitoring System</span></div>
+      <aside className={`bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 md:sticky top-0 h-auto md:h-screen z-20 shadow-2xl transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-full md:w-24 px-4' : 'w-full md:w-72'}`}>
+        <div className="flex items-center justify-between text-white">
+          <div className="flex items-center space-x-3 overflow-hidden">
+            <Logo size={isSidebarCollapsed ? 40 : 40} className="text-emerald-500 shadow-lg shadow-emerald-500/20 shrink-0" />
+            {!isSidebarCollapsed && (
+              <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                <span className="text-xl font-black tracking-tighter block">SIPAKATAU</span>
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Monitoring System</span>
+              </div>
+            )}
+          </div>
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden md:flex p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
         </div>
 
-        <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+        <div className={`bg-slate-800/50 rounded-2xl border border-slate-700/50 transition-all duration-300 ${isSidebarCollapsed ? 'p-2' : 'p-4'}`}>
            <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-emerald-400">
+             <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-emerald-400 shrink-0">
                 {user.role === 'super_admin' ? <ShieldCheck size={20} /> : <User size={20} />}
              </div>
-             <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-bold text-white truncate">{user.username}</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate">{user.role === 'super_admin' ? 'Super Admin' : 'Admin'}</p>
-             </div>
+             {!isSidebarCollapsed && (
+               <div className="flex-1 overflow-hidden animate-in fade-in duration-300">
+                  <p className="text-xs font-bold text-white truncate">{user.username}</p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate">{user.role === 'super_admin' ? 'Super Admin' : 'Admin'}</p>
+               </div>
+             )}
            </div>
         </div>
 
         <nav className="flex-1 space-y-2">
-          <button onClick={() => { setActiveTab('dashboard'); setSelectedDistrict(null); }} className={`w-full flex items-center space-x-3 p-3.5 rounded-xl transition-all ${activeTab === 'dashboard' && !selectedDistrict ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 font-bold' : 'hover:bg-slate-800'}`}><TrendingUp size={20} /><span>Overview</span></button>
-          <button onClick={() => setActiveTab('table')} className={`w-full flex items-center space-x-3 p-3.5 rounded-xl transition-all ${activeTab === 'table' ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 font-bold' : 'hover:bg-slate-800'}`}><Users size={20} /><span>Database PKL</span></button>
-          <div className="pt-4"><button onClick={() => { setIsEditMode(false); setIsFormOpen(true); }} className="w-full flex items-center justify-center space-x-3 p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95"><PlusCircle size={20} /><span>Tambah Data</span></button></div>
+          <button 
+            onClick={() => { setActiveTab('dashboard'); setSelectedDistrict(null); }} 
+            className={`w-full flex items-center space-x-3 p-3.5 rounded-xl transition-all ${activeTab === 'dashboard' && !selectedDistrict ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 font-bold' : 'hover:bg-slate-800'} ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+            title="Overview"
+          >
+            <TrendingUp size={20} className="shrink-0" />
+            {!isSidebarCollapsed && <span className="animate-in fade-in duration-300">Overview</span>}
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('table')} 
+            className={`w-full flex items-center space-x-3 p-3.5 rounded-xl transition-all ${activeTab === 'table' ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 font-bold' : 'hover:bg-slate-800'} ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+            title="Database PKL"
+          >
+            <Users size={20} className="shrink-0" />
+            {!isSidebarCollapsed && <span className="animate-in fade-in duration-300">Database PKL</span>}
+          </button>
+          
+          <div className="pt-4">
+            <button 
+              onClick={() => { setIsEditMode(false); setIsFormOpen(true); }} 
+              className={`w-full flex items-center justify-center space-x-3 p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-600/20 active:scale-95 ${isSidebarCollapsed ? 'px-0' : ''}`}
+              title="Tambah Data"
+            >
+              <PlusCircle size={20} className="shrink-0" />
+              {!isSidebarCollapsed && <span className="animate-in fade-in duration-300">Tambah Data</span>}
+            </button>
+          </div>
         </nav>
 
         <div className="pt-8 border-t border-slate-800 space-y-4">
-          <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-               <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${syncError ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} /><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sync Status</span></div>
-               {isSyncing && <RefreshCw size={12} className="text-emerald-400 animate-spin" />}
+          {!isSidebarCollapsed && (
+            <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between mb-2">
+                 <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${syncError ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} /><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sync Status</span></div>
+                 {isSyncing && <RefreshCw size={12} className="text-emerald-400 animate-spin" />}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-300"><Clock size={12} /><span>{lastSync.toLocaleTimeString('id-ID')}</span></div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-300"><Clock size={12} /><span>{lastSync.toLocaleTimeString('id-ID')}</span></div>
-          </div>
+          )}
           
-          <button onClick={handleLogout} className="w-full flex items-center space-x-3 p-3.5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500">
-            <LogOut size={20} />
-            <span className="font-bold">Logout</span>
+          <button 
+            onClick={handleLogout} 
+            className={`w-full flex items-center space-x-3 p-3.5 rounded-xl hover:bg-red-500 hover:text-white transition-all text-slate-500 ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+            title="Logout"
+          >
+            <LogOut size={20} className="shrink-0" />
+            {!isSidebarCollapsed && <span className="font-bold animate-in fade-in duration-300">Logout</span>}
           </button>
         </div>
       </aside>
