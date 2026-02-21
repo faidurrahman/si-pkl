@@ -98,8 +98,18 @@ const App: React.FC = () => {
   // Logic to filter data based on user role
   const scopedData = useMemo(() => {
     if (!user) return [];
-    if (user.role === 'super_admin') return data;
-    return data.filter(item => item.kelurahan.trim().toLowerCase() === user.kelurahan?.trim().toLowerCase());
+    
+    // Filter data sampah (baris yang bergeser atau salah input di Sheet)
+    const validData = data.filter(item => 
+      item.id_pkl && 
+      item.nama_pedagang && 
+      !item.nama_pedagang.toLowerCase().includes('relokasi') && // Menghapus data "Sudah Relokasi" yang masuk ke kolom Nama
+      item.kelurahan && 
+      KELURAHAN_LIST.some(k => k.toLowerCase() === item.kelurahan.trim().toLowerCase())
+    );
+
+    if (user.role === 'super_admin') return validData;
+    return validData.filter(item => item.kelurahan.trim().toLowerCase() === user.kelurahan?.trim().toLowerCase());
   }, [data, user]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -182,13 +192,11 @@ const App: React.FC = () => {
     const total = scopedData.length;
     const relocated = scopedData.filter(d => d.status === 'Sudah Relokasi').length;
     const notRelocated = total - relocated;
-    const byDistrictMap: Record<string, number> = {};
-    scopedData.forEach(d => {
-      const key = (d.kelurahan || 'Unknown').trim();
-      byDistrictMap[key] = (byDistrictMap[key] || 0) + 1;
-    });
-    const districtData = Object.entries(byDistrictMap).map(([name, value]) => {
-      const dRelocated = scopedData.filter(d => d.kelurahan.trim() === name && d.status === 'Sudah Relokasi').length;
+
+    const districtData = KELURAHAN_LIST.map(name => {
+      const districtPKLs = scopedData.filter(d => d.kelurahan.trim().toLowerCase() === name.toLowerCase());
+      const value = districtPKLs.length;
+      const dRelocated = districtPKLs.filter(d => d.status === 'Sudah Relokasi').length;
       return { 
         name, 
         value, 
@@ -196,7 +204,7 @@ const App: React.FC = () => {
         notRelocated: value - dRelocated, 
         percentage: value > 0 ? Math.round((dRelocated / value) * 100) : 0 
       };
-    }).sort((a, b) => b.value - a.value);
+    }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
 
     let districtStats = null;
     if (selectedDistrict) {
