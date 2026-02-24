@@ -304,10 +304,15 @@ const App: React.FC = () => {
                              formData.status.trim() && 
                              formData.history.trim();
     
+    if (!isBasicInfoValid) {
+      alert("Mohon lengkapi semua data Informasi Dasar terlebih dahulu.");
+      return;
+    }
+
     const isPhotoValid = previews.before;
 
-    if (!isBasicInfoValid || !isPhotoValid) {
-      alert("Mohon lengkapi semua data dan unggah Foto Sebelum");
+    if (!isPhotoValid) {
+      alert("FOTO SEBELUM (BEFORE) wajib diunggah sebagai bukti awal penertiban.");
       return;
     }
 
