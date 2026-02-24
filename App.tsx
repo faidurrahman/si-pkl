@@ -52,6 +52,38 @@ const KELURAHAN_LIST = [
   "Sawerigading"
 ];
 
+const generateNewId = (kelurahanName: string, existingData: PKLData[]) => {
+  const prefixMap: Record<string, string> = {
+    "Pisang Selatan": "PS",
+    "Pisang Utara": "PU",
+    "Maloku": "MK",
+    "Bulogading": "BG",
+    "Losari": "LS",
+    "Lae-Lae": "LL",
+    "Mangkura": "MG",
+    "Baru": "BR",
+    "Sawerigading": "SG",
+    "Lajangiru": "LJ"
+  };
+  
+  const prefix = prefixMap[kelurahanName] || "XX";
+  
+  const existingIds = existingData
+    .map(d => d.id_pkl)
+    .filter(id => id && id.startsWith(prefix + '-'));
+    
+  let maxNumber = 0;
+  existingIds.forEach(id => {
+    const numPart = id.split('-')[1];
+    if (numPart && !isNaN(Number(numPart))) {
+      maxNumber = Math.max(maxNumber, Number(numPart));
+    }
+  });
+  
+  const nextNumber = maxNumber + 1;
+  return `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
+};
+
 interface UserAuth {
   username: string;
   role: 'super_admin' | 'admin';
@@ -263,12 +295,29 @@ const App: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validasi Field Wajib
+    const isBasicInfoValid = formData.nama.trim() && 
+                             formData.kelurahan.trim() && 
+                             formData.jenis.trim() && 
+                             formData.alamat.trim() && 
+                             formData.status.trim() && 
+                             formData.history.trim();
+    
+    const isPhotoValid = previews.before;
+
+    if (!isBasicInfoValid || !isPhotoValid) {
+      alert("Mohon lengkapi semua data dan unggah Foto Sebelum");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (isEditMode) {
         await updatePKLData(formData);
       } else {
-        await submitPKLData(formData);
+        const newId = generateNewId(formData.kelurahan, data);
+        await submitPKLData({ ...formData, id_pkl: newId });
       }
       alert(`Data berhasil ${isEditMode ? 'diperbarui' : 'dikirim'}!`);
       closeForm();
@@ -747,8 +796,8 @@ const App: React.FC = () => {
                     <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Jenis Dagangan</label><input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.jenis} onChange={(e) => setFormData({...formData, jenis: e.target.value})} /></div>
                   </div>
                   <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Alamat / Lokasi</label><textarea required rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.alamat} onChange={(e) => setFormData({...formData, alamat: e.target.value})}></textarea></div>
-                  <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Status</label><select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}><option value="Belum Relokasi">Belum Relokasi</option><option value="Sudah Relokasi">Sudah Relokasi</option></select></div>
-                  <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">History Penertiban</label><textarea rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.history} placeholder="Contoh: Sudah teguran ke-3" onChange={(e) => setFormData({...formData, history: e.target.value})}></textarea></div>
+                  <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Status</label><select required className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})}><option value="Belum Relokasi">Belum Relokasi</option><option value="Sudah Relokasi">Sudah Relokasi</option></select></div>
+                  <div><label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">History Penertiban</label><textarea required rows={2} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none" value={formData.history} placeholder="Contoh: Sudah teguran ke-3" onChange={(e) => setFormData({...formData, history: e.target.value})}></textarea></div>
                </div>
                <div className="space-y-6">
                   <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 border-b pb-2"><Camera className="text-emerald-500" size={18} /> Dokumentasi</h3>
