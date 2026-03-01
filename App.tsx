@@ -29,7 +29,8 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  Percent
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
@@ -595,7 +596,12 @@ const App: React.FC = () => {
               <StatCard title="Total PKL" value={selectedDistrict ? (stats.districtStats?.total ?? 0) : stats.total} icon={<Users />} color="text-blue-600 bg-blue-100" />
               <StatCard title="Relokasi" value={selectedDistrict ? (stats.districtStats?.relocated ?? 0) : stats.relocated} icon={<CheckCircle />} color="text-emerald-600 bg-emerald-100" />
               <StatCard title="Belum" value={selectedDistrict ? (stats.districtStats?.notRelocated ?? 0) : stats.notRelocated} icon={<XCircle />} color="text-red-600 bg-red-100" />
-              <StatCard title="Efektivitas" value={selectedDistrict ? `${(stats.districtStats?.total ?? 0) > 0 ? Math.round(((stats.districtStats?.relocated ?? 0) / (stats.districtStats?.total ?? 1)) * 100) : 0}%` : (user.role === 'super_admin' ? `${stats.districtData.length} Wilayah` : `${Math.round((stats.relocated / (stats.total || 1)) * 100)}% Progress`)} icon={<TrendingUp />} color="text-amber-600 bg-amber-100" />
+              <StatCard 
+                title="Progres Relokasi" 
+                value={`${selectedDistrict ? ((stats.districtStats?.total ?? 0) > 0 ? Math.round(((stats.districtStats?.relocated ?? 0) / (stats.districtStats?.total ?? 1)) * 100) : 0) : (stats.total > 0 ? Math.round((stats.relocated / stats.total) * 100) : 0)}%`} 
+                icon={<Percent />} 
+                color="text-amber-600 bg-amber-100" 
+              />
             </div>
 
             {user.role === 'super_admin' && (
