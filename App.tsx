@@ -135,6 +135,9 @@ const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Lightbox State
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -880,8 +883,8 @@ const App: React.FC = () => {
                  <div className="space-y-4 md:space-y-6">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-sm md:text-lg"><Camera size={16} className="text-emerald-500 md:w-5 md:h-5" /> Dokumentasi Foto</h3>
                     <div className="grid grid-cols-1 gap-4 md:gap-6">
-                       <div className="space-y-1.5 md:space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">BEFORE</label><div className="aspect-video bg-slate-100 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_before ? <img src={selectedTrader.foto_before} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] md:text-xs italic">N/A</div>}</div></div>
-                       <div className="space-y-1.5 md:space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AFTER</label><div className="aspect-video bg-slate-100 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_after ? <img src={selectedTrader.foto_after} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] md:text-xs italic">Belum Ada</div>}</div></div>
+                       <div className="space-y-1.5 md:space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">BEFORE</label><div className="aspect-video bg-slate-100 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_before ? <img src={selectedTrader.foto_before} onClick={() => setSelectedImage(selectedTrader.foto_before as string)} className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] md:text-xs italic">N/A</div>}</div></div>
+                       <div className="space-y-1.5 md:space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AFTER</label><div className="aspect-video bg-slate-100 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_after ? <img src={selectedTrader.foto_after} onClick={() => setSelectedImage(selectedTrader.foto_after as string)} className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] md:text-xs italic">Belum Ada</div>}</div></div>
                     </div>
                  </div>
                  <div className="space-y-4 md:space-y-6">
@@ -895,6 +898,27 @@ const App: React.FC = () => {
               </div>
               <div className="p-4 md:p-8 bg-slate-50 border-t border-slate-100 flex justify-end"><button onClick={() => setSelectedTrader(null)} className="px-6 py-2 md:px-12 md:py-3.5 bg-slate-900 text-white font-bold rounded-xl md:rounded-2xl hover:bg-emerald-600 transition-all uppercase tracking-widest text-[10px] md:text-xs">Tutup</button></div>
            </div>
+        </div>
+      )}
+
+      {/* Lightbox Overlay */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 text-white hover:text-gray-300 p-2 transition-colors"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X size={32} />
+          </button>
+          <img 
+            src={selectedImage} 
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200" 
+            onClick={(e) => e.stopPropagation()} 
+            alt="Enlarged view"
+          />
         </div>
       )}
     </div>
