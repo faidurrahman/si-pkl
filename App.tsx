@@ -133,6 +133,7 @@ const App: React.FC = () => {
 
   // Sidebar State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -473,7 +474,14 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
-      <aside className={`bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 md:sticky top-0 h-auto md:h-screen z-20 shadow-2xl transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-full md:w-24 px-4' : 'w-full md:w-72'}`}>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+      <aside className={`fixed md:sticky top-0 h-screen z-40 bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 shadow-2xl transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-24 px-4' : 'md:w-72'}`}>
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center space-x-3 overflow-hidden">
             <Logo size={isSidebarCollapsed ? 40 : 40} className="text-emerald-500 shadow-lg shadow-emerald-500/20 shrink-0" />
@@ -559,23 +567,28 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-900">
-              {user.role === 'admin' ? `Wilayah: ${user.kelurahan}` : (selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama')}
-            </h1>
-            <p className="text-slate-500 text-sm">Monitoring PKL Kecamatan Ujung Pandang - {lastSync.toLocaleString('id-ID')}</p>
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
+          <div className="flex items-center gap-2 md:gap-3 flex-1">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors shrink-0">
+              <Menu size={24} />
+            </button>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900">
+                {user.role === 'admin' ? `Wilayah: ${user.kelurahan}` : (selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama')}
+              </h1>
+              <p className="text-slate-500 text-xs md:text-sm">Monitoring PKL Kecamatan Ujung Pandang - {lastSync.toLocaleString('id-ID')}</p>
+            </div>
           </div>
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full md:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Cari ID atau Nama..." className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Cari ID atau Nama..." className="w-full pl-9 pr-4 py-2 md:py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         </header>
 
         {activeTab === 'dashboard' ? (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-6 md:space-y-8">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               <StatCard title="Total PKL" value={selectedDistrict ? (stats.districtStats?.total ?? 0) : stats.total} icon={<Users />} color="text-blue-600 bg-blue-100" />
               <StatCard title="Relokasi" value={selectedDistrict ? (stats.districtStats?.relocated ?? 0) : stats.relocated} icon={<CheckCircle />} color="text-emerald-600 bg-emerald-100" />
               <StatCard title="Belum" value={selectedDistrict ? (stats.districtStats?.notRelocated ?? 0) : stats.notRelocated} icon={<XCircle />} color="text-red-600 bg-red-100" />
@@ -588,15 +601,15 @@ const App: React.FC = () => {
                     <div className="flex items-center gap-3"><ClipboardList className="text-blue-600" size={20} /><h3 className="font-bold text-slate-800">Rekapitulasi Wilayah</h3></div>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                  <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
                       <tr><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4 text-center">Total</th><th className="px-6 py-4 text-center">Relokasi</th><th className="px-6 py-4 text-center">Belum</th><th className="px-6 py-4">Progress</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {stats.districtData.map((district) => (
                         <tr key={district.name} onClick={() => setSelectedDistrict(district.name)} className={`hover:bg-emerald-50 transition-colors cursor-pointer ${selectedDistrict === district.name ? 'bg-emerald-50' : ''}`}>
-                          <td className="px-6 py-4 font-bold text-slate-900">{district.name}</td>
-                          <td className="px-6 py-4 text-center font-bold text-slate-500">{district.value}</td>
+                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">{district.name}</td>
+                          <td className="px-6 py-4 text-center font-bold text-slate-500 text-sm">{district.value}</td>
                           <td className="px-6 py-4 text-center"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.relocated}</span></td>
                           <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.notRelocated}</span></td>
                           <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${district.percentage}%` }} /></div><span className="text-[10px] font-bold text-slate-400">{district.percentage}%</span></div></td>
@@ -617,7 +630,7 @@ const App: React.FC = () => {
                   </div>
                </div>
                <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                 <table className="w-full text-left border-collapse">
+                 <table className="w-full text-left border-collapse whitespace-nowrap">
                    <thead className="sticky top-0 z-10 bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100 shadow-sm">
                      <tr>
                        <th className="px-6 py-4 bg-slate-50">ID</th>
@@ -630,10 +643,10 @@ const App: React.FC = () => {
                    <tbody className="divide-y divide-slate-100 bg-white">
                      {paginatedData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
-                         <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id_pkl}</td>
-                         <td className="px-6 py-4"><span className="font-bold text-slate-900 block group-hover:text-emerald-600">{item.nama_pedagang}</span><span className="text-[10px] text-slate-400 uppercase tracking-tighter">{item.kelurahan}</span></td>
-                         <td className="px-6 py-4 text-xs text-slate-500">{item.jenis_dagangan}</td>
-                         <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
+                         <td className="px-6 py-4 font-mono text-sm text-slate-500">{item.id_pkl}</td>
+                         <td className="px-6 py-4"><span className="font-bold text-slate-900 block group-hover:text-emerald-600 text-sm">{item.nama_pedagang}</span><span className="text-xs text-slate-400 uppercase tracking-tighter">{item.kelurahan}</span></td>
+                         <td className="px-6 py-4 text-sm text-slate-600">{item.jenis_dagangan}</td>
+                         <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all" title="Detail"><Info size={14} /></button>
@@ -696,7 +709,7 @@ const App: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
              <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex justify-between items-center"><h3 className="font-bold text-slate-800">Database Semua Pedagang</h3><button onClick={() => loadData()} className="text-[10px] font-bold text-slate-500 flex items-center gap-2 hover:text-emerald-600 transition-colors uppercase tracking-widest"><RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} /> REFRESH</button></div>
              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
                    <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 shadow-sm">
                      <tr>
                        <th className="px-6 py-4 bg-slate-50">ID</th>
@@ -709,10 +722,10 @@ const App: React.FC = () => {
                    <tbody className="divide-y divide-slate-100 bg-white">
                      {paginatedData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
-                         <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.id_pkl}</td>
-                         <td className="px-6 py-4 font-bold text-slate-900">{item.nama_pedagang}</td>
+                         <td className="px-6 py-4 font-mono text-sm text-slate-500">{item.id_pkl}</td>
+                         <td className="px-6 py-4 font-bold text-slate-900 text-sm">{item.nama_pedagang}</td>
                          <td className="px-6 py-4 text-sm text-slate-600">{item.kelurahan}</td>
-                         <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
+                         <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><Info size={14} /></button>
@@ -854,33 +867,33 @@ const App: React.FC = () => {
 
       {selectedTrader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-white/20">
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center relative overflow-hidden">
+           <div className="bg-white w-full max-w-4xl rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-white/20">
+              <div className="bg-slate-900 p-4 md:p-8 text-white flex justify-between items-center relative overflow-hidden">
                  <div className="absolute top-0 right-0 p-16 bg-emerald-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
                  <div className="relative z-10">
-                    <h2 className="text-2xl font-bold tracking-tight">{selectedTrader.nama_pedagang}</h2>
-                    <div className="flex items-center gap-3 mt-2 text-slate-400 text-sm"><span className="bg-slate-800 px-2.5 py-1 rounded-lg font-mono text-xs border border-slate-700">ID: {selectedTrader.id_pkl}</span><span className="flex items-center gap-1.5"><MapPin size={14} className="text-emerald-500"/> {selectedTrader.kelurahan}</span></div>
+                    <h2 className="text-lg md:text-2xl font-bold tracking-tight">{selectedTrader.nama_pedagang}</h2>
+                    <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2 text-slate-400 text-xs md:text-sm"><span className="bg-slate-800 px-2 py-0.5 md:px-2.5 md:py-1 rounded-lg font-mono text-[10px] md:text-xs border border-slate-700">ID: {selectedTrader.id_pkl}</span><span className="flex items-center gap-1 md:gap-1.5"><MapPin size={12} className="text-emerald-500 md:w-3.5 md:h-3.5"/> {selectedTrader.kelurahan}</span></div>
                  </div>
-                 <button onClick={() => setSelectedTrader(null)} className="bg-slate-800 p-2.5 rounded-full hover:bg-red-500 transition-all z-10 border border-slate-700"><X size={20} /></button>
+                 <button onClick={() => setSelectedTrader(null)} className="bg-slate-800 p-1.5 md:p-2.5 rounded-full hover:bg-red-500 transition-all z-10 border border-slate-700"><X size={16} className="md:w-5 md:h-5" /></button>
               </div>
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-10 overflow-y-auto max-h-[75vh]">
-                 <div className="space-y-6">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-3 mb-4 text-lg"><Camera size={20} className="text-emerald-500" /> Dokumentasi Foto</h3>
-                    <div className="grid grid-cols-1 gap-6">
-                       <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">BEFORE</label><div className="aspect-video bg-slate-100 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_before ? <img src={selectedTrader.foto_before} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs italic">N/A</div>}</div></div>
-                       <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AFTER</label><div className="aspect-video bg-slate-100 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_after ? <img src={selectedTrader.foto_after} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs italic">Belum Ada</div>}</div></div>
+              <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 overflow-y-auto max-h-[75vh]">
+                 <div className="space-y-4 md:space-y-6">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-sm md:text-lg"><Camera size={16} className="text-emerald-500 md:w-5 md:h-5" /> Dokumentasi Foto</h3>
+                    <div className="grid grid-cols-1 gap-4 md:gap-6">
+                       <div className="space-y-1.5 md:space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">BEFORE</label><div className="aspect-video bg-slate-100 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_before ? <img src={selectedTrader.foto_before} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] md:text-xs italic">N/A</div>}</div></div>
+                       <div className="space-y-1.5 md:space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AFTER</label><div className="aspect-video bg-slate-100 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">{selectedTrader.foto_after ? <img src={selectedTrader.foto_after} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] md:text-xs italic">Belum Ada</div>}</div></div>
                     </div>
                  </div>
-                 <div className="space-y-6">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-3 mb-4 text-lg"><ClipboardList size={20} className="text-emerald-500" /> Informasi Lengkap</h3>
-                    <div className="space-y-4">
-                       <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Status Relokasi</p><span className={`px-3 py-1 rounded-xl text-xs font-bold shadow-sm inline-block ${selectedTrader.status === 'Sudah Relokasi' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{selectedTrader.status}</span></div>
-                       <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Lokasi/Alamat</p><p className="text-sm font-bold text-slate-700">{selectedTrader.alamat}</p></div>
-                       <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-2">History Penertiban</p><p className="text-sm text-slate-600 italic border-l-4 border-emerald-500/20 pl-4 py-1">{selectedTrader.history_penertiban || "Tidak ada catatan."}</p></div>
+                 <div className="space-y-4 md:space-y-6">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 md:gap-3 mb-2 md:mb-4 text-sm md:text-lg"><ClipboardList size={16} className="text-emerald-500 md:w-5 md:h-5" /> Informasi Lengkap</h3>
+                    <div className="space-y-3 md:space-y-4">
+                       <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Status Relokasi</p><span className={`px-2 py-0.5 md:px-3 md:py-1 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold shadow-sm inline-block ${selectedTrader.status === 'Sudah Relokasi' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{selectedTrader.status}</span></div>
+                       <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Lokasi/Alamat</p><p className="text-xs md:text-sm font-bold text-slate-700">{selectedTrader.alamat}</p></div>
+                       <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">History Penertiban</p><p className="text-xs md:text-sm text-slate-600 italic border-l-4 border-emerald-500/20 pl-3 md:pl-4 py-0.5 md:py-1">{selectedTrader.history_penertiban || "Tidak ada catatan."}</p></div>
                     </div>
                  </div>
               </div>
-              <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end"><button onClick={() => setSelectedTrader(null)} className="px-12 py-3.5 bg-slate-900 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all uppercase tracking-widest text-xs">Tutup</button></div>
+              <div className="p-4 md:p-8 bg-slate-50 border-t border-slate-100 flex justify-end"><button onClick={() => setSelectedTrader(null)} className="px-6 py-2 md:px-12 md:py-3.5 bg-slate-900 text-white font-bold rounded-xl md:rounded-2xl hover:bg-emerald-600 transition-all uppercase tracking-widest text-[10px] md:text-xs">Tutup</button></div>
            </div>
         </div>
       )}
