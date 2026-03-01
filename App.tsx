@@ -30,7 +30,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  Percent
+  Percent,
+  Download,
+  Printer
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
@@ -356,6 +358,44 @@ const App: React.FC = () => {
     }
   };
 
+  const handleExportData = () => {
+    const dataToExport = filteredData;
+    if (dataToExport.length === 0) {
+      alert("Tidak ada data untuk diexport");
+      return;
+    }
+
+    const headers = ["ID PKL", "Nama Pedagang", "Kelurahan", "Jenis Dagangan", "Alamat", "Status", "History Penertiban"];
+    const csvRows = [headers.join(",")];
+
+    dataToExport.forEach(item => {
+      const row = [
+        item.id_pkl,
+        `"${item.nama_pedagang}"`,
+        item.kelurahan,
+        `"${item.jenis_dagangan}"`,
+        `"${item.alamat}"`,
+        item.status,
+        `"${item.history_penertiban || ''}"`
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    
+    const fileName = user?.role === 'admin' 
+      ? `Data_PKL_${user.kelurahan}.csv` 
+      : (selectedDistrict ? `Data_PKL_${selectedDistrict}.csv` : "Data_PKL_Semua_Wilayah.csv");
+      
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const openFormForEdit = (item: PKLData) => {
     setIsEditMode(true);
     setFormData({
@@ -625,6 +665,22 @@ const App: React.FC = () => {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot className="bg-slate-100 border-t-2 border-slate-200 font-bold text-slate-800">
+                      <tr>
+                        <td className="px-6 py-4 text-sm">TOTAL KESELURUHAN</td>
+                        <td className="px-6 py-4 text-center text-sm">{stats.total}</td>
+                        <td className="px-6 py-4 text-center"><span className="bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">{stats.relocated}</span></td>
+                        <td className="px-6 py-4 text-center"><span className="bg-red-200 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">{stats.notRelocated}</span></td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-600" style={{ width: `${stats.total > 0 ? Math.round((stats.relocated / stats.total) * 100) : 0}%` }} />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-600">{stats.total > 0 ? Math.round((stats.relocated / stats.total) * 100) : 0}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </div>
@@ -633,7 +689,13 @@ const App: React.FC = () => {
             <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-500 overflow-hidden ${(selectedDistrict || user.role === 'admin') ? 'border-emerald-500/40 ring-8 ring-emerald-500/5' : 'border-white'}`}>
                <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${(selectedDistrict || user.role === 'admin') ? 'bg-emerald-50/30' : 'bg-slate-50/10'}`}>
                   <div className="flex items-center gap-3"><div className="bg-emerald-500 text-white p-2 rounded-xl"><Users size={18} /></div><div><h3 className="font-bold text-slate-900">{(selectedDistrict || user.role === 'admin') ? `Daftar: ${user.role === 'admin' ? user.kelurahan : selectedDistrict}` : 'Daftar Pedagang'}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} pedagang ditemukan</p></div></div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button onClick={handleExportData} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
+                      <Download size={16} /> Export CSV
+                    </button>
+                    <button onClick={() => window.print()} className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
+                      <Printer size={16} /> Cetak
+                    </button>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider outline-none"><option value="All">Semua Status</option><option value="Sudah Relokasi">Sudah Relokasi</option><option value="Belum Relokasi">Belum Relokasi</option></select>
                     {(selectedDistrict || statusFilter !== 'All') && <button onClick={resetAllFilters} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2"><RefreshCw size={14} /> RESET</button>}
                   </div>
