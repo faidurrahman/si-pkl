@@ -141,6 +141,9 @@ const App: React.FC = () => {
   // Lightbox State
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -300,6 +303,11 @@ const App: React.FC = () => {
     }
   };
 
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -312,30 +320,55 @@ const App: React.FC = () => {
                              formData.history.trim();
     
     if (!isBasicInfoValid) {
-      alert("Mohon lengkapi semua data Informasi Dasar terlebih dahulu.");
+      showToast("Mohon lengkapi semua data Informasi Dasar terlebih dahulu.", 'error');
       return;
     }
 
     const isPhotoValid = previews.before;
 
     if (!isPhotoValid) {
-      alert("FOTO SEBELUM (BEFORE) wajib diunggah sebagai bukti awal penertiban.");
+      showToast("FOTO SEBELUM (BEFORE) wajib diunggah sebagai bukti awal penertiban.", 'error');
       return;
     }
 
     setIsSubmitting(true);
+    
+    // Optimistic Update Data
+    const optimisticId = isEditMode ? formData.id_pkl : generateNewId(formData.kelurahan, data);
+    const newItem: PKLData = {
+      id_pkl: optimisticId,
+      tanggal_data: new Date().toLocaleDateString('id-ID'),
+      nama_pedagang: formData.nama,
+      kelurahan: formData.kelurahan,
+      alamat: formData.alamat,
+      jenis_dagangan: formData.jenis,
+      status: formData.status as 'Sudah Relokasi' | 'Belum Relokasi',
+      foto_before: previews.before || formData.fotoBeforeBase64, // Use preview URL or base64 for immediate display
+      foto_after: previews.after || formData.fotoAfterBase64,
+      history_penertiban: formData.history
+    };
+
+    // Update Local State Immediately
+    if (isEditMode) {
+      setData(prev => prev.map(item => item.id_pkl === formData.id_pkl ? newItem : item));
+    } else {
+      setData(prev => [newItem, ...prev]);
+    }
+
+    closeForm();
+    showToast(`Data berhasil ${isEditMode ? 'diperbarui' : 'ditambahkan'}!`, 'success');
+
     try {
       if (isEditMode) {
         await updatePKLData(formData);
       } else {
-        const newId = generateNewId(formData.kelurahan, data);
-        await submitPKLData({ ...formData, id_pkl: newId });
+        await submitPKLData({ ...formData, id_pkl: optimisticId });
       }
-      alert(`Data berhasil ${isEditMode ? 'diperbarui' : 'dikirim'}!`);
-      closeForm();
-      setTimeout(() => loadData(), 2000);
+      // Trigger background sync to ensure consistency
+      loadData(true);
     } catch (err) {
-      alert('Gagal memproses data.');
+      showToast('Gagal menyinkronkan data ke server, namun data tersimpan lokal sementara.', 'error');
+      // Optionally revert state here if strict consistency is needed
     } finally {
       setIsSubmitting(false);
     }
@@ -344,17 +377,22 @@ const App: React.FC = () => {
   const confirmDelete = async () => {
     if (!deletingId) return;
     setIsDeleting(true);
+    
+    // Optimistic Delete
+    const idToDelete = deletingId;
+    setData(prev => prev.filter(item => item.id_pkl !== idToDelete));
+    setDeletingId(null);
+    setIsDeleting(false);
+    showToast('Data pedagang berhasil dihapus.', 'success');
+
     try {
-      await deletePKLData(deletingId);
-      setTimeout(async () => {
-        await loadData();
-        setDeletingId(null);
-        setIsDeleting(false);
-        alert('Data pedagang berhasil dihapus.');
-      }, 2000);
+      await deletePKLData(idToDelete);
+      // Background sync
+      loadData(true);
     } catch (err) {
-      alert('Gagal menghapus data.');
-      setIsDeleting(false);
+      showToast('Gagal menghapus data di server.', 'error');
+      // Revert if needed, but for now we keep it optimistic
+      loadData(true); // Reload to restore state
     }
   };
 
@@ -987,6 +1025,18 @@ const App: React.FC = () => {
             onClick={(e) => e.stopPropagation()} 
             alt="Enlarged view"
           />
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 z-[110] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 ${
+          toast.type === 'success' ? 'bg-emerald-600 text-white' : 
+          toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle size={20} /> : 
+           toast.type === 'error' ? <AlertTriangle size={20} /> : <Info size={20} />}
+          <span className="font-bold text-sm">{toast.message}</span>
         </div>
       )}
     </div>
