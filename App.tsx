@@ -640,7 +640,9 @@ const App: React.FC = () => {
             <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700 animate-in fade-in duration-300">
               <div className="flex items-center justify-between mb-2">
                  <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${syncError ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} /><span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sync Status</span></div>
-                 {isSyncing && <RefreshCw size={12} className="text-emerald-400 animate-spin" />}
+                 <button onClick={() => loadData(false)} className="p-1 hover:bg-slate-700 rounded transition-colors" title="Paksa Sinkronisasi">
+                    <RefreshCw size={12} className={`text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                 </button>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-300"><Clock size={12} /><span>{lastSync.toLocaleTimeString('id-ID')}</span></div>
             </div>
