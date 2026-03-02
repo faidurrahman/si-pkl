@@ -95,7 +95,10 @@ interface UserAuth {
 
 const App: React.FC = () => {
   // Authentication State
-  const [user, setUser] = useState<UserAuth | null>(null);
+  const [user, setUser] = useState<UserAuth | null>(() => {
+    const savedUser = localStorage.getItem('user_session');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -177,7 +180,9 @@ const App: React.FC = () => {
 
       // Super Admin: superadmin / samiun15
       if (inputUser === 'superadmin' && inputPass === 'samiun15') {
-        setUser({ username: 'Super Admin', role: 'super_admin' });
+        const userData: UserAuth = { username: 'Super Admin', role: 'super_admin' };
+        setUser(userData);
+        localStorage.setItem('user_session', JSON.stringify(userData));
         setIsLoggingIn(false);
         return;
       }
@@ -189,7 +194,9 @@ const App: React.FC = () => {
         const inputPassNormalized = inputPass.toLowerCase().replace(/\s+/g, '');
         
         if (inputUser === normalizedKel && inputPassNormalized === normalizedKel) {
-          setUser({ username: `Admin ${kel}`, role: 'admin', kelurahan: kel });
+          const userData: UserAuth = { username: `Admin ${kel}`, role: 'admin', kelurahan: kel };
+          setUser(userData);
+          localStorage.setItem('user_session', JSON.stringify(userData));
           foundAdmin = true;
           break;
         }
@@ -203,6 +210,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('user_session');
     setUser(null);
     setLoginForm({ username: '', password: '' });
     setLoginError(null);
