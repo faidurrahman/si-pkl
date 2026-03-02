@@ -46,7 +46,9 @@ const getDirectDriveUrl = (url: string): string => {
 export const fetchPKLDataFromSheet = async (): Promise<PKLData[]> => {
   try {
     // Gunakan no-cache agar selalu mendapatkan data terbaru
-    const response = await fetch(CSV_URL, { cache: 'no-store' });
+    // Tambahkan timestamp query parameter untuk memaksa bypass cache Google
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${CSV_URL}&t=${timestamp}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet');
     
     const csvText = await response.text();
