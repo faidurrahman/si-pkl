@@ -16,7 +16,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => {
       </div>
       <div className="overflow-hidden">
         <p className="text-xs md:text-sm font-medium text-slate-500 truncate">{title}</p>
-        <h3 className="text-xl md:text-2xl font-bold text-slate-900 truncate">{value}</h3>
+        <h3 className="text-lg md:text-2xl font-bold text-slate-900 truncate">{value}</h3>
       </div>
     </div>
   );

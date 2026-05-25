@@ -99,6 +99,7 @@ const App: React.FC = () => {
     const savedUser = localStorage.getItem('user_session');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [showLogin, setShowLogin] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -153,8 +154,6 @@ const App: React.FC = () => {
 
   // Logic to filter data based on user role
   const scopedData = useMemo(() => {
-    if (!user) return [];
-    
     // Filter data sampah (baris yang bergeser atau salah input di Sheet)
     const validData = data.filter(item => 
       item.id_pkl && 
@@ -164,7 +163,7 @@ const App: React.FC = () => {
       KELURAHAN_LIST.some(k => k.toLowerCase() === item.kelurahan.trim().toLowerCase())
     );
 
-    if (user.role === 'super_admin') return validData;
+    if (!user || user.role === 'super_admin') return validData;
     return validData.filter(item => item.kelurahan.trim().toLowerCase() === user.kelurahan?.trim().toLowerCase());
   }, [data, user]);
 
@@ -235,12 +234,10 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      loadData();
-      const interval = setInterval(() => loadData(true), 30000); 
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+    loadData();
+    const interval = setInterval(() => loadData(true), 30000); 
+    return () => clearInterval(interval);
+  }, []);
 
   // Set default kelurahan in form for admins
   useEffect(() => {
@@ -476,9 +473,13 @@ const App: React.FC = () => {
   };
 
   // Login View
-  if (!user) {
+  if (!user && showLogin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
+        {/* Back Button */}
+        <button onClick={() => setShowLogin(false)} className="absolute top-4 left-4 md:top-8 md:left-8 px-4 py-2 bg-white/10 backdrop-blur text-white border border-white/20 rounded-lg flex items-center gap-2 hover:bg-white/20 transition-colors font-bold text-sm z-10">
+           <ChevronLeft size={16} /> Kembali ke Publik
+        </button>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
           <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
@@ -565,12 +566,13 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
       {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
+      {isMobileMenuOpen && user && (
         <div 
           className="fixed inset-0 bg-black/50 z-30 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
+      {user && (
       <aside className={`fixed md:sticky top-0 h-screen z-40 bg-slate-900 text-slate-300 p-6 flex flex-col space-y-8 shadow-2xl transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'} ${isSidebarCollapsed ? 'md:w-24 px-4' : 'md:w-72'}`}>
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center space-x-3 overflow-hidden">
@@ -658,27 +660,45 @@ const App: React.FC = () => {
           </button>
         </div>
       </aside>
+      )}
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
+        <header className="flex justify-between items-start gap-4 mb-6 md:mb-8">
           <div className="flex items-center gap-2 md:gap-3 flex-1">
+            {user ? (
             <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors shrink-0">
               <Menu size={24} />
             </button>
+            ) : (
+               <div className="shrink-0 flex items-center justify-center p-2 bg-emerald-500 rounded-xl">
+                 <Logo size={24} className="text-white" />
+               </div>
+            )}
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900">
-                {user.role === 'admin' ? `Wilayah: ${user.kelurahan}` : (selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama')}
+              <h1 className="text-base md:text-2xl font-bold text-slate-900 leading-tight">
+                {user ? (user.role === 'admin' ? `Wilayah: ${user.kelurahan}` : (selectedDistrict ? `Wilayah: ${selectedDistrict}` : 'Dashboard Utama')) : 'Laporan Publik SIPAKATAU'}
               </h1>
-              <p className="text-slate-500 text-xs md:text-sm">Monitoring PKL Kecamatan Ujung Pandang - {lastSync.toLocaleString('id-ID')}</p>
+              <p className="text-slate-500 text-[10px] md:text-sm mt-0.5 md:mt-1">
+                Monitoring PKL Kec. Ujung Pandang - {lastSync.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+              </p>
             </div>
           </div>
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Cari ID atau Nama..." className="w-full pl-9 pr-4 py-2 md:py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <div className="flex flex-col sm:flex-row gap-3">
+             {user && (
+               <div className="relative w-full sm:w-64 md:w-72 mt-2 sm:mt-0">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                 <input type="text" placeholder="Cari ID / Nama..." className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+               </div>
+             )}
+             {!user && (
+               <button onClick={() => setShowLogin(true)} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-500 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm shrink-0">
+                 <Lock size={14} /> <span className="hidden sm:inline">Login Admin</span><span className="sm:hidden">Login</span>
+               </button>
+             )}
           </div>
         </header>
 
-        {activeTab === 'dashboard' ? (
+        {(activeTab === 'dashboard' || !user) ? (
           <div className="space-y-6 md:space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               <StatCard title="Total PKL" value={selectedDistrict ? (stats.districtStats?.total ?? 0) : stats.total} icon={<Users />} color="text-blue-600 bg-blue-100" />
@@ -692,7 +712,7 @@ const App: React.FC = () => {
               />
             </div>
 
-            {user.role === 'super_admin' && (
+            {(!user || user.role === 'super_admin') && (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
                     <div className="flex items-center gap-3"><ClipboardList className="text-blue-600" size={20} /><h3 className="font-bold text-slate-800">Rekapitulasi Wilayah</h3></div>
@@ -705,8 +725,8 @@ const App: React.FC = () => {
                     <tbody className="divide-y divide-slate-100">
                       {stats.districtData.map((district) => (
                         <tr key={district.name} onClick={() => setSelectedDistrict(district.name)} className={`hover:bg-emerald-50 transition-colors cursor-pointer ${selectedDistrict === district.name ? 'bg-emerald-50' : ''}`}>
-                          <td className="px-6 py-4 font-bold text-slate-900 text-sm">{district.name}</td>
-                          <td className="px-6 py-4 text-center font-bold text-slate-500 text-sm">{district.value}</td>
+                          <td className="px-6 py-4 font-bold text-slate-900 text-xs md:text-sm">{district.name}</td>
+                          <td className="px-6 py-4 text-center font-bold text-slate-500 text-xs md:text-sm">{district.value}</td>
                           <td className="px-6 py-4 text-center"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.relocated}</span></td>
                           <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.notRelocated}</span></td>
                           <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${district.percentage}%` }} /></div><span className="text-[10px] font-bold text-slate-400">{district.percentage}%</span></div></td>
@@ -715,8 +735,8 @@ const App: React.FC = () => {
                     </tbody>
                     <tfoot className="bg-slate-100 border-t-2 border-slate-200 font-bold text-slate-800">
                       <tr>
-                        <td className="px-6 py-4 text-sm">TOTAL KESELURUHAN</td>
-                        <td className="px-6 py-4 text-center text-sm">{stats.total}</td>
+                        <td className="px-6 py-4 text-xs md:text-sm">TOTAL KESELURUHAN</td>
+                        <td className="px-6 py-4 text-center text-xs md:text-sm">{stats.total}</td>
                         <td className="px-6 py-4 text-center"><span className="bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">{stats.relocated}</span></td>
                         <td className="px-6 py-4 text-center"><span className="bg-red-200 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">{stats.notRelocated}</span></td>
                         <td className="px-6 py-4">
@@ -734,6 +754,7 @@ const App: React.FC = () => {
               </div>
             )}
 
+            {user && (
             <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-500 overflow-hidden ${(selectedDistrict || user.role === 'admin') ? 'border-emerald-500/40 ring-8 ring-emerald-500/5' : 'border-white'}`}>
                <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${(selectedDistrict || user.role === 'admin') ? 'bg-emerald-50/30' : 'bg-slate-50/10'}`}>
                   <div className="flex items-center gap-3"><div className="bg-emerald-500 text-white p-2 rounded-xl"><Users size={18} /></div><div><h3 className="font-bold text-slate-900">{(selectedDistrict || user.role === 'admin') ? `Daftar: ${user.role === 'admin' ? user.kelurahan : selectedDistrict}` : 'Daftar Pedagang'}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} pedagang ditemukan</p></div></div>
@@ -762,10 +783,10 @@ const App: React.FC = () => {
                    <tbody className="divide-y divide-slate-100 bg-white">
                      {paginatedData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
-                         <td className="px-6 py-4 font-mono text-sm text-slate-500">{item.id_pkl}</td>
-                         <td className="px-6 py-4"><span className="font-bold text-slate-900 block group-hover:text-emerald-600 text-sm">{item.nama_pedagang}</span><span className="text-xs text-slate-400 uppercase tracking-tighter">{item.kelurahan}</span></td>
-                         <td className="px-6 py-4 text-sm text-slate-600">{item.jenis_dagangan}</td>
-                         <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
+                         <td className="px-6 py-4 font-mono text-[10px] md:text-sm text-slate-500">{item.id_pkl}</td>
+                         <td className="px-6 py-4"><span className="font-bold text-slate-900 block group-hover:text-emerald-600 text-xs md:text-sm">{item.nama_pedagang}</span><span className="text-[10px] md:text-xs text-slate-400 uppercase tracking-tighter">{item.kelurahan}</span></td>
+                         <td className="px-6 py-4 text-xs md:text-sm text-slate-600">{item.jenis_dagangan}</td>
+                         <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all" title="Detail"><Info size={14} /></button>
@@ -823,8 +844,9 @@ const App: React.FC = () => {
                  </div>
                </div>
             </div>
+            )}
           </div>
-        ) : (
+        ) : user && activeTab === 'table' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
              <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex justify-between items-center"><h3 className="font-bold text-slate-800">Database Semua Pedagang</h3><button onClick={() => loadData()} className="text-[10px] font-bold text-slate-500 flex items-center gap-2 hover:text-emerald-600 transition-colors uppercase tracking-widest"><RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} /> REFRESH</button></div>
              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -841,10 +863,10 @@ const App: React.FC = () => {
                    <tbody className="divide-y divide-slate-100 bg-white">
                      {paginatedData.map((item, idx) => (
                        <tr key={`${item.id_pkl}-${idx}`} className="hover:bg-slate-50 transition-colors group">
-                         <td className="px-6 py-4 font-mono text-sm text-slate-500">{item.id_pkl}</td>
-                         <td className="px-6 py-4 font-bold text-slate-900 text-sm">{item.nama_pedagang}</td>
-                         <td className="px-6 py-4 text-sm text-slate-600">{item.kelurahan}</td>
-                         <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
+                         <td className="px-6 py-4 font-mono text-[10px] md:text-sm text-slate-500">{item.id_pkl}</td>
+                         <td className="px-6 py-4 font-bold text-slate-900 text-xs md:text-sm">{item.nama_pedagang}</td>
+                         <td className="px-6 py-4 text-xs md:text-sm text-slate-600">{item.kelurahan}</td>
+                         <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><Info size={14} /></button>
@@ -902,7 +924,7 @@ const App: React.FC = () => {
                </div>
              </div>
           </div>
-        )}
+        ) : null}
       </main>
 
       {/* Modal Tambah/Edit Data */}
