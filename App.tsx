@@ -32,7 +32,8 @@ import {
   Menu,
   Percent,
   Download,
-  Printer
+  Printer,
+  PieChart as PieChartIcon
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
@@ -698,6 +699,14 @@ const App: React.FC = () => {
           </div>
         </header>
 
+        {!user && (
+          <div className="mb-6 md:mb-8 bg-blue-50/50 border border-blue-100 p-4 md:p-5 rounded-2xl">
+            <p className="text-slate-600 text-xs md:text-sm leading-relaxed">
+              <strong>Dashboard ini merupakan wujud transparansi</strong> Pemerintah Kecamatan Ujung Pandang dalam upaya penataan fasilitas umum dan bahu jalan. Proses relokasi dilakukan secara bertahap, terdata, dan merata di 10 Kelurahan demi kenyamanan warga bersama.
+            </p>
+          </div>
+        )}
+
         {(activeTab === 'dashboard' || !user) ? (
           <div className="space-y-6 md:space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
@@ -713,11 +722,60 @@ const App: React.FC = () => {
             </div>
 
             {(!user || user.role === 'super_admin') && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
-                    <div className="flex items-center gap-3"><ClipboardList className="text-blue-600" size={20} /><h3 className="font-bold text-slate-800">Rekapitulasi Wilayah</h3></div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                {/* Pie Chart Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden col-span-1">
+                  <div className="p-6 border-b border-slate-100 flex items-center gap-3 bg-slate-50/20">
+                    <PieChartIcon size={20} className="text-emerald-500" />
+                    <h3 className="font-bold text-slate-800">Status Keseluruhan</h3>
+                  </div>
+                  <div className="p-6 flex flex-col items-center">
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Sudah Relokasi', value: stats.relocated },
+                              { name: 'Belum Relokasi', value: stats.notRelocated }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            labelLine={false}
+                            label={({ cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value }) => {
+                              const RADIAN = Math.PI / 180;
+                              const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                              return (
+                                <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold">
+                                  {value}
+                                </text>
+                              );
+                            }}
+                          >
+                            <Cell fill="#10b981" />
+                            <Cell fill="#ef4444" />
+                          </Pie>
+                          <Legend verticalAlign="bottom" height={36} />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
-                <div className="overflow-x-auto">
+
+                {/* Table Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden col-span-1 lg:col-span-2">
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+                      <div className="flex items-center gap-3"><ClipboardList className="text-blue-600" size={20} /><h3 className="font-bold text-slate-800">Rekapitulasi Wilayah</h3></div>
+                  </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-left whitespace-nowrap">
                     <thead className="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
                       <tr><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4 text-center">Total</th><th className="px-6 py-4 text-center">Relokasi</th><th className="px-6 py-4 text-center">Belum</th><th className="px-6 py-4">Progress</th></tr>
@@ -727,8 +785,8 @@ const App: React.FC = () => {
                         <tr key={district.name} onClick={() => setSelectedDistrict(district.name)} className={`hover:bg-emerald-50 transition-colors cursor-pointer ${selectedDistrict === district.name ? 'bg-emerald-50' : ''}`}>
                           <td className="px-6 py-4 font-bold text-slate-900 text-xs md:text-sm">{district.name}</td>
                           <td className="px-6 py-4 text-center font-bold text-slate-500 text-xs md:text-sm">{district.value}</td>
-                          <td className="px-6 py-4 text-center"><span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.relocated}</span></td>
-                          <td className="px-6 py-4 text-center"><span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">{district.notRelocated}</span></td>
+                          <td className="px-6 py-4 text-center"><span className="bg-emerald-500 text-white px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold shadow-sm">{district.relocated}</span></td>
+                          <td className="px-6 py-4 text-center"><span className="bg-red-500 text-white px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold shadow-sm">{district.notRelocated}</span></td>
                           <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${district.percentage}%` }} /></div><span className="text-[10px] font-bold text-slate-400">{district.percentage}%</span></div></td>
                         </tr>
                       ))}
@@ -737,8 +795,8 @@ const App: React.FC = () => {
                       <tr>
                         <td className="px-6 py-4 text-xs md:text-sm">TOTAL KESELURUHAN</td>
                         <td className="px-6 py-4 text-center text-xs md:text-sm">{stats.total}</td>
-                        <td className="px-6 py-4 text-center"><span className="bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">{stats.relocated}</span></td>
-                        <td className="px-6 py-4 text-center"><span className="bg-red-200 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold">{stats.notRelocated}</span></td>
+                        <td className="px-6 py-4 text-center"><span className="bg-emerald-600 text-white px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold shadow-sm">{stats.relocated}</span></td>
+                        <td className="px-6 py-4 text-center"><span className="bg-red-600 text-white px-2.5 py-1 rounded-md text-[10px] md:text-xs font-bold shadow-sm">{stats.notRelocated}</span></td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -750,6 +808,7 @@ const App: React.FC = () => {
                       </tr>
                     </tfoot>
                   </table>
+                </div>
                 </div>
               </div>
             )}
@@ -925,6 +984,11 @@ const App: React.FC = () => {
              </div>
           </div>
         ) : null}
+        {/* Footer */}
+        <footer className="mt-12 mb-4 text-center text-slate-500 text-xs md:text-sm">
+           <p className="font-medium text-slate-600 mb-1">© 2026 Pemerintah Kecamatan Ujung Pandang.</p>
+           <p>Punya pertanyaan atau masukan? Kunjungi Instagram kami di <a href="https://instagram.com/kecamatan_ujung.pandang" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 hover:underline font-bold transition-colors">@kecamatan_ujung.pandang</a></p>
+        </footer>
       </main>
 
       {/* Modal Tambah/Edit Data */}
