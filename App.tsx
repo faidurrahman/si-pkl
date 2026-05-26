@@ -311,7 +311,8 @@ const App: React.FC = () => {
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    const duration = type === 'error' ? 9000 : 3000;
+    setTimeout(() => setToast(null), duration);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -372,9 +373,12 @@ const App: React.FC = () => {
       }
       // Trigger background sync to ensure consistency
       loadData(true);
-    } catch (err) {
-      showToast('Gagal menyinkronkan data ke server, namun data tersimpan lokal sementara.', 'error');
-      // Optionally revert state here if strict consistency is needed
+    } catch (err: any) {
+      if (err.message && err.message.includes('DriveApp')) {
+        showToast('Info PENTING: Foto berhasil masuk ke Drive, tetapi data gagal ditambahkan ke Sheet karena Apps Script Anda ditolak aksesnya ("Access Denied: DriveApp", biasanya di bagian setSharing). Mohon perbarui code Apps Script Anda sesuai petunjuk AI!', 'error');
+      } else {
+        showToast('Gagal sinkronisasi Spreadsheet! Jika foto berhasil diunggah ke Google Drive tetapi data tidak bertambah di Spreadsheet, periksa sisa baris kosong atau kuota kapasitas sel di Google Sheets Anda.', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }

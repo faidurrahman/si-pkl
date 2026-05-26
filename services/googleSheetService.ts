@@ -15,7 +15,7 @@ const TARGET_DRIVE_FOLDER_ID = '1v512TPNJm752mNGSM4GufacyAGn6QlQs';
 /**
  * URL Aplikasi Web dari Google Apps Script
  */
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNIC_6aoVMICn170I3voOQcZ5bvS1wLdwPR0y2wq7_0q_wi0BxclbII3hdVCX6I3CZ/exec';
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwuVMijv5L9IZRd7t0HmaSQ5Sesgy5yaqOtyuO__irsX-Mlys8Mi8iVGrEo7vEnAPEl/exec';
 
 /**
  * Mengubah URL Google Drive menjadi Direct Link Gambar yang lebih reliabel.
@@ -104,8 +104,44 @@ export const deletePKLData = async (id_pkl: string) => {
 
 const sendToAppsScript = async (payload: any) => {
   try {
-    const finalPayload = {
+    // Normalisasi payload agar kompatibel secara menyeluruh baik dengan schema UI React maupun header Google Sheet/Drive script
+    const normalizedPayload = {
       ...payload,
+      // 1. Lowercase/Snake keys (for database/UI compatibility)
+      id_pkl: payload.id_pkl || payload.id || '',
+      tanggal_data: payload.tanggal_data || new Date().toLocaleDateString('id-ID'),
+      nama_pedagang: payload.nama_pedagang || payload.nama || '',
+      kelurahan: payload.kelurahan || '',
+      alamat: payload.alamat || '',
+      jenis_dagangan: payload.jenis_dagangan || payload.jenis || '',
+      status: payload.status || 'Belum Relokasi',
+      history_penertiban: payload.history_penertiban || payload.history || '',
+      foto_before: payload.foto_before || payload.fotoBeforeBase64 || '',
+      foto_after: payload.foto_after || payload.fotoAfterBase64 || '',
+
+      // 2. Capitalized/Space keys (matching actual Sheet Column Headers exactly!)
+      "ID_PKL": payload.id_pkl || payload.id || '',
+      "Tanggal Data": payload.tanggal_data || new Date().toLocaleDateString('id-ID'),
+      "Nama Pedagang": payload.nama_pedagang || payload.nama || '',
+      "Kelurahan": payload.kelurahan || '',
+      "Alamat / Lokasi": payload.alamat || '',
+      "Jenis Dagangan": payload.jenis_dagangan || payload.jenis || '',
+      "Status": payload.status || 'Belum Relokasi',
+      "Foto Before": payload.foto_before || payload.fotoBeforeBase64 || '',
+      "Foto After": payload.foto_after || payload.fotoAfterBase64 || '',
+      "History Penertiban": payload.history_penertiban || payload.history || '',
+
+      // 3. Legacy/Alternate names (backward compatibility)
+      id: payload.id || payload.id_pkl || '',
+      nama: payload.nama || payload.nama_pedagang || '',
+      jenis: payload.jenis || payload.jenis_dagangan || '',
+      history: payload.history || payload.history_penertiban || '',
+      fotoBeforeBase64: payload.fotoBeforeBase64 || payload.foto_before || '',
+      fotoAfterBase64: payload.fotoAfterBase64 || payload.foto_after || '',
+    };
+
+    const finalPayload = {
+      ...normalizedPayload,
       targetSheetId: TARGET_SHEET_ID,
       targetFolderId: TARGET_DRIVE_FOLDER_ID,
     };
