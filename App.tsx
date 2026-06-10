@@ -33,7 +33,8 @@ import {
   Percent,
   Download,
   Printer,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  Eye
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect } from 'react';
 import { INITIAL_PKL_DATA } from './constants';
@@ -179,8 +180,8 @@ const App: React.FC = () => {
       const inputPass = password.trim();
 
       // Super Admin: superadmin / samiun15
-      if (inputUser === 'superadmin' && inputPass === 'samiun15') {
-        const userData: UserAuth = { username: 'Super Admin', role: 'super_admin' };
+      if ((inputUser === 'superadmin' || inputUser === '199010102025061001') && inputPass === 'samiun15') {
+        const userData: UserAuth = { username: inputUser === 'superadmin' ? 'Super Admin' : 'Admin (199010102025061001)', role: 'super_admin' };
         setUser(userData);
         localStorage.setItem('user_session', JSON.stringify(userData));
         setIsLoggingIn(false);
@@ -817,17 +818,20 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {user && (
-            <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-500 overflow-hidden ${(selectedDistrict || user.role === 'admin') ? 'border-emerald-500/40 ring-8 ring-emerald-500/5' : 'border-white'}`}>
-               <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${(selectedDistrict || user.role === 'admin') ? 'bg-emerald-50/30' : 'bg-slate-50/10'}`}>
-                  <div className="flex items-center gap-3"><div className="bg-emerald-500 text-white p-2 rounded-xl"><Users size={18} /></div><div><h3 className="font-bold text-slate-900">{(selectedDistrict || user.role === 'admin') ? `Daftar: ${user.role === 'admin' ? user.kelurahan : selectedDistrict}` : 'Daftar Pedagang'}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} pedagang ditemukan</p></div></div>
+            <div className={`bg-white rounded-2xl shadow-xl border-2 transition-all duration-500 overflow-hidden ${(selectedDistrict || user?.role === 'admin') ? 'border-emerald-500/40 ring-8 ring-emerald-500/5' : 'border-white'}`}>
+               <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${(selectedDistrict || user?.role === 'admin') ? 'bg-emerald-50/30' : 'bg-slate-50/10'}`}>
+                  <div className="flex items-center gap-3"><div className="bg-emerald-500 text-white p-2 rounded-xl"><Users size={18} /></div><div><h3 className="font-bold text-slate-900">{(selectedDistrict || user?.role === 'admin') ? `Daftar: ${user?.role === 'admin' ? user?.kelurahan : selectedDistrict}` : 'Daftar Pedagang'}</h3><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredData.length} pedagang ditemukan</p></div></div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <button onClick={handleExportData} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
-                      <Download size={16} /> Export CSV
-                    </button>
-                    <button onClick={() => window.print()} className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
-                      <Printer size={16} /> Cetak
-                    </button>
+                    {user && (
+                      <>
+                        <button onClick={handleExportData} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
+                          <Download size={16} /> Export CSV
+                        </button>
+                        <button onClick={() => window.print()} className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm">
+                          <Printer size={16} /> Cetak
+                        </button>
+                      </>
+                    )}
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider outline-none"><option value="All">Semua Status</option><option value="Sudah Relokasi">Sudah Relokasi</option><option value="Belum Relokasi">Belum Relokasi</option></select>
                     {(selectedDistrict || statusFilter !== 'All') && <button onClick={resetAllFilters} className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2"><RefreshCw size={14} /> RESET</button>}
                   </div>
@@ -852,10 +856,14 @@ const App: React.FC = () => {
                          <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all" title="Detail"><Info size={14} /></button>
-                              <button onClick={() => openFormForEdit(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-blue-500 hover:text-white transition-all" title="Edit"><Pencil size={14} /></button>
-                              {user.role === 'super_admin' && (
-                                <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Hapus"><Trash2 size={14} /></button>
+                              <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all" title="Detail"><Eye size={14} /></button>
+                              {user && (
+                                <>
+                                  <button onClick={() => openFormForEdit(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-blue-500 hover:text-white transition-all" title="Edit"><Pencil size={14} /></button>
+                                  {user.role === 'super_admin' && (
+                                    <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Hapus"><Trash2 size={14} /></button>
+                                  )}
+                                </>
                               )}
                             </div>
                          </td>
@@ -907,7 +915,6 @@ const App: React.FC = () => {
                  </div>
                </div>
             </div>
-            )}
           </div>
         ) : user && activeTab === 'table' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -932,7 +939,7 @@ const App: React.FC = () => {
                          <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase ${item.status === 'Sudah Relokasi' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{item.status}</span></td>
                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><Info size={14} /></button>
+                              <button onClick={() => setSelectedTrader(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><Eye size={14} /></button>
                               <button onClick={() => openFormForEdit(item)} className="p-2 bg-slate-100 rounded-lg hover:bg-blue-500 hover:text-white transition-all"><Pencil size={14} /></button>
                               {user.role === 'super_admin' && (
                                 <button onClick={() => setDeletingId(item.id_pkl)} className="p-2 bg-slate-100 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
