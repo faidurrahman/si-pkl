@@ -227,6 +227,11 @@ const App: React.FC = () => {
         setData(sheetData);
         setLastSync(new Date());
         setSyncError(false);
+        setSelectedTrader(prev => {
+          if (!prev) return prev;
+          const updated = sheetData.find(item => item.id_pkl === prev.id_pkl);
+          return updated || prev;
+        });
       }
     } catch (err) {
       setSyncError(true);

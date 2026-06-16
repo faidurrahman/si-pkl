@@ -48,7 +48,13 @@ export const fetchPKLDataFromSheet = async (): Promise<PKLData[]> => {
     // Gunakan no-cache agar selalu mendapatkan data terbaru
     // Tambahkan timestamp query parameter untuk memaksa bypass cache Google
     const timestamp = new Date().getTime();
-    const response = await fetch(`${CSV_URL}&t=${timestamp}`);
+    const response = await fetch(`${CSV_URL}&t=${timestamp}`, {
+      cache: 'no-store',
+      headers: {
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
+      }
+    });
     if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet');
     
     const csvText = await response.text();
