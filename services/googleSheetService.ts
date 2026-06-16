@@ -52,21 +52,56 @@ export const fetchPKLDataFromSheet = async (): Promise<PKLData[]> => {
     if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet');
     
     const csvText = await response.text();
-    const lines = csvText.split(/\r?\n/);
+    
+    // Robust CSV parser to handle newlines inside quotes
+    const parsedRows: string[][] = [];
+    let row: string[] = [];
+    let currentItem = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < csvText.length; i++) {
+      let char = csvText[i];
+      let nextChar = csvText[i+1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+           currentItem += '"';
+           i++; // skip escaped quote
+        } else {
+           inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(currentItem);
+        currentItem = '';
+      } else if ((char === '\n' || char === '\r') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+            i++;
+        }
+        row.push(currentItem);
+        parsedRows.push(row);
+        row = [];
+        currentItem = '';
+      } else {
+        currentItem += char;
+      }
+    }
+    if (currentItem || row.length > 0) {
+        row.push(currentItem);
+        parsedRows.push(row);
+    }
+
     const result: PKLData[] = [];
     
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      // Split CSV dengan menangani data yang mungkin mengandung koma di dalam tanda kutip
-      const currentLine = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    // Start from index 1 to skip header
+    for (let i = 1; i < parsedRows.length; i++) {
+      const currentLine = parsedRows[i];
       if (currentLine.length < 5) continue;
-
+      
+      // Clean function won't need to replace surrounding quotes anymore
+      // because our parser handles quotes, but let's keep it safe by just trimming whitespace.
       const clean = (val: string) => {
         if (!val) return '';
-        // Hapus tanda kutip pembungkus dan spasi berlebih
-        return val.replace(/^["']|["']$/g, '').trim();
+        return val.trim();
       };
 
       result.push({
@@ -77,7 +112,6 @@ export const fetchPKLDataFromSheet = async (): Promise<PKLData[]> => {
         alamat: clean(currentLine[4]),
         jenis_dagangan: clean(currentLine[5]),
         status: clean(currentLine[6]) === 'Sudah Relokasi' ? 'Sudah Relokasi' : 'Belum Relokasi',
-        // Terapkan konversi ke thumbnail link agar muncul di dashboard
         foto_before: getDirectDriveUrl(clean(currentLine[7])),
         foto_after: getDirectDriveUrl(clean(currentLine[8])),
         history_penertiban: clean(currentLine[9]) || 'Tidak ada catatan'

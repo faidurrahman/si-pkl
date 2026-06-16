@@ -1105,7 +1105,7 @@ const App: React.FC = () => {
                     <div className="space-y-3 md:space-y-4">
                        <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Status Relokasi</p><span className={`px-2 py-0.5 md:px-3 md:py-1 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold shadow-sm inline-block ${selectedTrader.status === 'Sudah Relokasi' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{selectedTrader.status}</span></div>
                        <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">Lokasi/Alamat</p><p className="text-xs md:text-sm font-bold text-slate-700">{selectedTrader.alamat}</p></div>
-                       <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">History Penertiban</p><p className="text-xs md:text-sm text-slate-600 italic border-l-4 border-emerald-500/20 pl-3 md:pl-4 py-0.5 md:py-1">{selectedTrader.history_penertiban || "Tidak ada catatan."}</p></div>
+                       <div className="p-3 md:p-5 bg-slate-50 rounded-xl md:rounded-2xl border border-slate-100"><p className="text-[10px] font-bold text-slate-400 uppercase mb-1 md:mb-2">History Penertiban</p><p className="text-xs md:text-sm text-slate-600 italic border-l-4 border-emerald-500/20 pl-3 md:pl-4 py-0.5 md:py-1 whitespace-pre-line">{selectedTrader.history_penertiban || "Tidak ada catatan."}</p></div>
                     </div>
                  </div>
               </div>
